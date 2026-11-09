@@ -124,12 +124,13 @@ class SuperAdminDashboard
             'Ending soon' => 'status-orange',
             'Completed' => 'status-gray',
         ];
+        // Same badge classes as the system's other tables.
         $lectureStatusCls = [
-            'Ongoing' => 'status-green',
-            'Upcoming' => 'status-blue',
-            'Completed' => 'status-gray',
-            'Cancelled' => 'status-red',
-            'Postponed' => 'status-orange',
+            'Ongoing' => 'table-btn-success',
+            'Upcoming' => 'table-btn-primary',
+            'Completed' => 'table-btn-green-blue',
+            'Cancelled' => 'table-btn-danger',
+            'Postponed' => 'table-btn-orange',
         ];
 
         $liveNow = count(array_filter($liveClasses, function ($l) {
@@ -206,15 +207,6 @@ class SuperAdminDashboard
                 padding: 16px 20px;
             }
 
-            .sad-title {
-                font-size: 16px;
-                font-weight: 600;
-                color: var(--dark-color);
-                margin: 0;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
 
             .sad-scope {
                 font-size: 11px;
@@ -327,16 +319,20 @@ class SuperAdminDashboard
                 height: 42px;
                 width: 100%;
                 background: var(--custom-white);
-                border: 1px solid transparent;
+                border: 1px solid var(--line-color);
                 font-size: 13.5px;
                 color: var(--main-text-color);
                 padding: 0 12px;
                 outline: none;
             }
 
-            .sad-control:focus,
             .sad-control:hover {
                 border-color: var(--dark-theme);
+            }
+
+            .sad-control:focus {
+                border-color: var(--dark-theme);
+                box-shadow: 0 0 0 0.25rem var(--light-theme);
             }
 
             button.sad-control {
@@ -392,7 +388,7 @@ class SuperAdminDashboard
             .sad-btn.ghost {
                 background: var(--custom-white);
                 color: var(--main-text-color);
-                border-color: transparent;
+                border-color: var(--line-color);
             }
 
             .sad-btn.ghost:hover {
@@ -796,6 +792,11 @@ class SuperAdminDashboard
                 display: inline-block;
             }
 
+            /* Lectures table uses the system table classes; keep it scrollable on small screens */
+            #dashboard-lectures-table {
+                min-width: 920px;
+            }
+
             /* Batches */
             .sad-batch {
                 padding: 14px 20px;
@@ -972,52 +973,11 @@ class SuperAdminDashboard
             }
 
             /* Table */
-            .sad-table-wrap {
-                width: 100%;
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-            }
 
-            .sad-table {
-                margin: 0;
-                width: 100%;
-                min-width: 920px;
-            }
 
-            .sad-table th {
-                background: var(--table-header-color) !important;
-                font-size: 13px;
-                font-weight: 500;
-                color: var(--main-text-color);
-                padding: 12px 16px !important;
-                white-space: nowrap;
-                border-bottom: 1px solid var(--line-color);
-            }
 
-            .sad-table td {
-                font-size: 13.5px;
-                padding: 12px 16px !important;
-                vertical-align: middle;
-                border-bottom: 1px solid var(--line-color);
-            }
 
-            .sad-table tr:last-child td {
-                border-bottom: 0;
-            }
 
-            .sad-avatar {
-                width: 34px;
-                height: 34px;
-                flex-shrink: 0;
-                background: var(--light-theme);
-                color: var(--dark-theme);
-                font-size: 12.5px;
-                font-weight: 600;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                object-fit: cover;
-            }
 
             .sad-empty {
                 display: flex;
@@ -1116,11 +1076,11 @@ class SuperAdminDashboard
                         <div class="row g-2 mb-3">
                             <div class="col-6">
                                 <label class="text-12 sub-text d-block mb-1" for="popFrom">From</label>
-                                <input type="date" id="popFrom" name="start_date" value="<?= $e($startDate) ?>" max="<?= $e($todayIso) ?>" class="form-control br-0">
+                                <input type="date" id="popFrom" name="start_date" value="<?= $e($startDate) ?>" max="<?= $e($todayIso) ?>" class="form-control custom-input">
                             </div>
                             <div class="col-6">
                                 <label class="text-12 sub-text d-block mb-1" for="popTo">To</label>
-                                <input type="date" id="popTo" name="end_date" value="<?= $e($endDate) ?>" class="form-control br-0">
+                                <input type="date" id="popTo" name="end_date" value="<?= $e($endDate) ?>" class="form-control custom-input">
                             </div>
                         </div>
                         <div class="d-flex justify-content-between">
@@ -1227,10 +1187,7 @@ class SuperAdminDashboard
                 <div class="col-12 col-xl-7">
                     <section class="sad-panel h-100 d-flex flex-column">
                         <div class="sad-panel-head">
-                            <h2 class="sad-title">
-                                Live Classes
-                                <span class="sad-scope">Today · <?= $e($fmtDate($todayIso, 'd M')) ?></span>
-                            </h2>
+                            <div class="d-flex align-items-center gap-2 flex-wrap"><span class="sub-topic">Live Classes</span> <span class="sad-scope">Today · <?= $e($fmtDate($todayIso, 'd M')) ?></span></div>
                             <div class="d-flex align-items-center gap-3">
                                 <?php if ($liveNow > 0) { ?>
                                     <span class="sad-pill status-green"><span class="sad-dot pulse"></span><?= $liveNow ?> live now</span>
@@ -1280,7 +1237,7 @@ class SuperAdminDashboard
                 <div class="col-12 col-xl-5">
                     <section class="sad-panel h-100">
                         <div class="sad-panel-head">
-                            <h2 class="sad-title">Management Action Centre</h2>
+                            <div class="d-flex align-items-center gap-2 flex-wrap"><span class="sub-topic">Management Action Centre</span></div>
                             <span class="sad-scope">Right now</span>
                         </div>
                         <div>
@@ -1314,7 +1271,7 @@ class SuperAdminDashboard
                 <div class="col-12 col-xl-8">
                     <section class="sad-panel h-100 d-flex flex-column">
                         <div class="sad-panel-head">
-                            <h2 class="sad-title">Fee collection <span class="sad-scope">Last 6 months</span></h2>
+                            <div class="d-flex align-items-center gap-2 flex-wrap"><span class="sub-topic">Fee collection</span> <span class="sad-scope">Last 6 months</span></div>
                             <div class="sad-legend">
                                 <span><i style="background:var(--sad-s2)"></i>Expected (due)</span>
                                 <span><i style="background:var(--sad-s1)"></i>Collected</span>
@@ -1332,7 +1289,7 @@ class SuperAdminDashboard
                 <div class="col-12 col-xl-4">
                     <section class="sad-panel h-100 d-flex flex-column">
                         <div class="sad-panel-head">
-                            <h2 class="sad-title">Period snapshot</h2>
+                            <div class="d-flex align-items-center gap-2 flex-wrap"><span class="sub-topic">Period snapshot</span></div>
                             <span class="sad-scope">Selected period</span>
                         </div>
                         <div class="sad-snap flex-grow-1">
@@ -1386,7 +1343,7 @@ class SuperAdminDashboard
                 <div class="col-12 col-xl-6">
                     <section class="sad-panel h-100">
                         <div class="sad-panel-head">
-                            <h2 class="sad-title">Batches <span class="sad-scope">Course progress</span></h2>
+                            <div class="d-flex align-items-center gap-2 flex-wrap"><span class="sub-topic">Batches</span> <span class="sad-scope">Course progress</span></div>
                             <a class="sad-link" href="intakes">All intakes<iconify-icon icon="mdi:chevron-right" width="16" height="16"></iconify-icon></a>
                         </div>
                         <div>
@@ -1431,7 +1388,7 @@ class SuperAdminDashboard
                 <div class="col-12 col-xl-6">
                     <section class="sad-panel h-100">
                         <div class="sad-panel-head">
-                            <h2 class="sad-title">Important Dates</h2>
+                            <div class="d-flex align-items-center gap-2 flex-wrap"><span class="sub-topic">Important Dates</span></div>
                             <div class="d-flex align-items-center gap-3 flex-wrap">
                                 <div class="sad-seg" role="tablist">
                                     <button type="button" id="tabBtnEvents" class="active" role="tab" onclick="sadCalTab('events')">Events (<?= count($eventsList) ?>)</button>
@@ -1477,7 +1434,7 @@ class SuperAdminDashboard
                 <div class="col-12 col-xl-6">
                     <section class="sad-panel h-100">
                         <div class="sad-panel-head">
-                            <h2 class="sad-title">New admissions <span class="sad-scope">Last 6 months</span></h2>
+                            <div class="d-flex align-items-center gap-2 flex-wrap"><span class="sub-topic">New admissions</span> <span class="sad-scope">Last 6 months</span></div>
                             <span class="text-13 sub-text"><b class="text-dark-color"><?= number_format(array_sum($trend['admissions'])) ?></b> students</span>
                         </div>
                         <div class="sad-panel-body">
@@ -1492,7 +1449,7 @@ class SuperAdminDashboard
                 <div class="col-12 col-xl-6">
                     <section class="sad-panel h-100">
                         <div class="sad-panel-head">
-                            <h2 class="sad-title">Students by programme <span class="sad-scope">All time</span></h2>
+                            <div class="d-flex align-items-center gap-2 flex-wrap"><span class="sub-topic">Students by programme</span> <span class="sad-scope">All time</span></div>
                             <div class="sad-legend">
                                 <span><i style="background:var(--sad-s1)"></i>Active</span>
                                 <span><i style="background:var(--sad-s2)"></i>Other</span>
@@ -1527,66 +1484,62 @@ class SuperAdminDashboard
             <!-- Lectures -->
             <section class="sad-panel mb-5">
                 <div class="sad-panel-head">
-                    <h2 class="sad-title">Lectures <span class="sad-scope"><?= $e($rangeLabel) ?></span></h2>
+                    <div class="d-flex align-items-center gap-2 flex-wrap"><span class="sub-topic">Lectures</span> <span class="sad-scope"><?= $e($rangeLabel) ?></span></div>
                     <div class="d-flex align-items-center gap-3">
                         <span class="text-13 sub-text">Showing <?= count($lecturesList) ?><?= count($lecturesList) >= 25 ? ' latest' : '' ?></span>
                         <a class="sad-link" href="lecture-schedule">View all<iconify-icon icon="mdi:chevron-right" width="16" height="16"></iconify-icon></a>
                     </div>
                 </div>
-                <div class="sad-table-wrap">
-                    <table class="table sad-table">
-                        <thead>
-                            <tr>
-                                <th scope="col">#</th>
-                                <th scope="col">Lecturer’s Name</th>
-                                <th scope="col">Lecture Type</th>
-                                <th scope="col">Intake / Batch</th>
-                                <th scope="col">Subject</th>
-                                <th scope="col">Date &amp; Time</th>
-                                <th scope="col">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (!empty($lecturesList)) {
-                                foreach ($lecturesList as $idx => $l) {
-                            ?>
-                                    <tr>
-                                        <td class="sub-text"><?= $idx + 1 ?></td>
-                                        <td>
-                                            <div class="d-flex align-items-center gap-2">
-                                                <?php if (!empty($l['profile'])) { ?>
-                                                    <img class="sad-avatar" src="<?= $e($l['profile']) ?>" alt="">
-                                                <?php } else { ?>
-                                                    <span class="sad-avatar"><?= $e($l['initials']) ?></span>
-                                                <?php } ?>
-                                                <span class="text-dark-color fw-medium"><?= $e($l['lecturer']) ?></span>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span class="sad-type">
-                                                <iconify-icon icon="<?= $l['type'] === 'Online' ? 'mdi:video-outline' : 'mdi:map-marker-outline' ?>" width="15" height="15"></iconify-icon><?= $e($l['type']) ?>
-                                            </span>
-                                        </td>
-                                        <td><?= $e($l['intake']) ?></td>
-                                        <td><?= $e($l['subject']) ?></td>
-                                        <td class="text-nowrap">
-                                            <?= $e($fmtDate($l['date'])) ?><br>
-                                            <span class="text-12 sub-text"><?= $time($l['start']) ?> – <?= $time($l['end']) ?></span>
-                                        </td>
-                                        <td>
-                                            <span class="sad-pill <?= $lectureStatusCls[$l['status']] ?? 'status-gray' ?>">
-                                                <?php if ($l['status'] === 'Ongoing') { ?><span class="sad-dot pulse"></span><?php } ?><?= $e($l['status']) ?>
-                                            </span>
-                                        </td>
-                                    </tr>
-                                <?php }
-                            } else { ?>
-                                <tr>
-                                    <td colspan="7"><?= $emptyState('No lectures found', 'No lectures scheduled for this date range and filter.') ?></td>
+                <div class="table-responsive-wrapper">
+                    <div class="table-responsive">
+                        <table class="table bl-solid m-0 p-0 g-0" id="dashboard-lectures-table">
+                            <thead>
+                                <tr class="br-t-5">
+                                    <th scope="col" class="px-4 py-3 bg-table-header text-14 main-text fw-medium align-content-center">#</th>
+                                    <th scope="col" class="py-3 bg-table-header text-14 main-text fw-medium align-content-center">Lecturer’s Name</th>
+                                    <th scope="col" class="py-3 bg-table-header text-14 main-text fw-medium align-content-center">Lecture Type</th>
+                                    <th scope="col" class="py-3 bg-table-header text-14 main-text fw-medium align-content-center">Intake / Batch</th>
+                                    <th scope="col" class="py-3 bg-table-header text-14 main-text fw-medium align-content-center">Subject</th>
+                                    <th scope="col" class="py-3 bg-table-header text-14 main-text fw-medium align-content-center">Date &amp; Time</th>
+                                    <th scope="col" class="py-3 bg-table-header text-14 main-text fw-medium align-content-center">Status</th>
                                 </tr>
-                            <?php } ?>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <?php if (!empty($lecturesList)) {
+                                    foreach ($lecturesList as $idx => $l) {
+                                ?>
+                                        <tr>
+                                            <td class="px-4 py-3 align-middle"><span class="text-14 main-text"><?= $idx + 1 ?></span></td>
+                                            <td class="py-2 align-middle">
+                                                <div class="d-flex align-items-center">
+                                                    <?php if (!empty($l['profile'])) { ?>
+                                                        <img src="<?= $e($l['profile']) ?>" class="hwr-40" style="object-fit:cover" alt="Lecturer image">
+                                                    <?php } else { ?>
+                                                        <div class="d-flex hwr-40 dark-theme bg-light-theme align-items-center justify-content-center fw-medium"><?= $e($l['initials']) ?></div>
+                                                    <?php } ?>
+                                                    <span class="text-14 main-text mx-2"><?= $e($l['lecturer']) ?></span>
+                                                </div>
+                                            </td>
+                                            <td class="py-2 align-middle"><span class="text-14 main-text"><?= $e($l['type']) ?></span></td>
+                                            <td class="py-2 align-middle"><span class="text-14 main-text"><?= $e($l['intake']) ?></span></td>
+                                            <td class="py-2 align-middle"><span class="text-14 main-text"><?= $e($l['subject']) ?></span></td>
+                                            <td class="py-2 align-middle text-nowrap">
+                                                <span class="text-14 main-text d-block"><?= $e($fmtDate($l['date'], 'Y-m-d')) ?></span>
+                                                <span class="text-12 sub-text"><?= $time($l['start']) ?> - <?= $time($l['end']) ?></span>
+                                            </td>
+                                            <td class="py-2 align-middle">
+                                                <button type="button" class="table-btn <?= $lectureStatusCls[$l['status']] ?? 'table-btn-primary' ?> w-100"><?= $e($l['status']) ?></button>
+                                            </td>
+                                        </tr>
+                                    <?php }
+                                } else { ?>
+                                    <tr>
+                                        <td colspan="7" class="py-3"><?= $emptyState('No lectures found', 'No lectures scheduled for this date range and filter.') ?></td>
+                                    </tr>
+                                <?php } ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </section>
         </div>
