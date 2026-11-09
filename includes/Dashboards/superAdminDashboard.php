@@ -4,1056 +4,1935 @@ class SuperAdminDashboard
     public static function loadContent()
     {
         $sessionUserRole = SessionUser::getCurrentUserRole();
-        $sessionUserObject = SessionUser::getCurrentUserObject();
 
-        if (SessionUser::ifUserIsPro($sessionUserRole) || $sessionUserRole != "Lecturer") {
+        if (!(SessionUser::ifUserIsPro($sessionUserRole) || $sessionUserRole != "Lecturer")) {
+            return;
+        }
 
-            require_once "./includes/classes/AdminDashboardSummary.php";
+        require_once "./includes/classes/AdminDashboardSummary.php";
 
-            $timezone = new DateTimeZone("Asia/Colombo");
-            $now = new DateTime("now", $timezone);
-            $todayIso = $now->format('Y-m-d');
+        $timezone = new DateTimeZone("Asia/Colombo");
+        $now = new DateTime("now", $timezone);
+        $todayIso = $now->format('Y-m-d');
 
-            // Default: current month start to today
-            $defaultFrom = $now->format('Y-m-01');
-            $defaultTo   = $todayIso;
+        $defaultFrom = $now->format('Y-m-01');
+        $defaultTo = $todayIso;
 
-            $startDate = !empty($_GET['start_date']) ? $_GET['start_date'] : $defaultFrom;
-            $endDate   = !empty($_GET['end_date'])   ? $_GET['end_date']   : $defaultTo;
-            $progFilter = isset($_GET['programme'])   ? (int)$_GET['programme'] : 0;
-            $searchFilter = isset($_GET['search'])    ? trim($_GET['search']) : '';
+        $startDate = !empty($_GET['start_date']) ? (string)$_GET['start_date'] : $defaultFrom;
+        $endDate = !empty($_GET['end_date']) ? (string)$_GET['end_date'] : $defaultTo;
+        $progFilter = isset($_GET['programme']) ? (int)$_GET['programme'] : 0;
+        $searchFilter = isset($_GET['search']) ? trim((string)$_GET['search']) : '';
 
-            $hasActiveFilter = ($startDate !== $defaultFrom || $endDate !== $defaultTo || $progFilter > 0 || !empty($searchFilter));
+        $data = AdminDashboardSummary::getComprehensiveDashboardData([
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'programme_id' => $progFilter,
+            'search' => $searchFilter,
+        ]);
 
-            // Fetch comprehensive data directly in PHP
-            $data = AdminDashboardSummary::getComprehensiveDashboardData([
-                'start_date'   => $startDate,
-                'end_date'     => $endDate,
-                'programme_id' => $progFilter,
-                'search'       => $searchFilter
-            ]);
+        // The data class validates/normalises the dates; use what it actually applied.
+        $startDate = $data['range']['from'];
+        $endDate = $data['range']['to'];
+        $hasActiveFilter = ($startDate !== $defaultFrom || $endDate !== $defaultTo || $progFilter > 0 || $searchFilter !== '');
 
-            $studentCards = $data['student_cards'];
-            $financeCards = $data['finance_cards'];
-            $systemCards  = $data['system_cards'];
-            $liveClasses  = $data['live'];
-            $actionItems  = $data['actions'];
-            $batchesList  = $data['batches'];
-            $eventsList   = $data['events'];
-            $deadlinesList = $data['deadlines'];
-            $lecturesList = $data['lectures'];
-            $programmes   = $data['programmes'];
+        $studentCards = $data['student_cards'];
+        $financeCards = $data['finance_cards'];
+        $systemCards = $data['system_cards'];
+        $insights = $data['insights'];
+        $trend = $data['trend'];
+        $programmeMix = $data['programme_mix'];
+        $liveClasses = $data['live'];
+        $actionItems = $data['actions'];
+        $batchesList = $data['batches'];
+        $eventsList = $data['events'];
+        $deadlinesList = $data['deadlines'];
+        $lecturesList = $data['lectures'];
+        $programmes = $data['programmes'];
 
-            // Formatted date range label for header
-            $fmtStart = (new DateTime($startDate))->format('d M Y');
-            $fmtEnd   = (new DateTime($endDate))->format('d M Y');
-            $rangeLabel = ($startDate === $endDate && $startDate === $todayIso)
-                ? "Today, " . (new DateTime($todayIso))->format('d M Y')
-                : $fmtStart . " – " . $fmtEnd;
+        $fmtDate = function ($d, $f = 'd M Y') {
+            return (new DateTime($d))->format($f);
+        };
+        $rangeLabel = ($startDate === $endDate && $startDate === $todayIso)
+            ? "Today, " . $fmtDate($todayIso)
+            : $fmtDate($startDate) . " – " . $fmtDate($endDate);
+        $prevLabel = $fmtDate($data['range']['prev_from'], 'd M') . " – " . $fmtDate($data['range']['prev_to']);
 
-            // User Info
-            $userFname = $sessionUserObject['user_fname'] ?? 'Admin';
-            $userLname = $sessionUserObject['user_lname'] ?? '';
-            $userName  = trim($userFname . ' ' . $userLname);
-            $userInitials = strtoupper(substr($userFname, 0, 1) . substr($userLname, 0, 1));
+        $selectedProgramme = 'All programmes';
+        foreach ($programmes as $p) {
+            if ((int)$p['id'] === $progFilter) {
+                $selectedProgramme = $p['name'];
+            }
+        }
 
-            // Helper: sparkline mini bar chart
-            $renderBars = function ($spark) {
-                if (empty($spark)) return '';
-                $max = max(max($spark), 1);
-                $html = '<div class="stats-mini-chart">';
-                $tot = count($spark);
-                foreach ($spark as $i => $v) {
-                    $h = max(6, (int)round(($v / $max) * 42));
-                    $act = ($i === $tot - 1) ? ' active' : '';
-                    $html .= '<span class="stats-mini-bar' . $act . '" style="height:' . $h . 'px"></span>';
-                }
-                $html .= '</div>';
-                return $html;
-            };
+        $e = function ($v) {
+            return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+        };
+        $money = function ($v, $decimals = 2) {
+            return number_format((float)$v, $decimals);
+        };
+        // Compact money for tight spaces: 1.25M, 640.5K
+        $moneyShort = function ($v) {
+            $v = (float)$v;
+            if (abs($v) >= 1000000) return rtrim(rtrim(number_format($v / 1000000, 2), '0'), '.') . 'M';
+            if (abs($v) >= 1000) return rtrim(rtrim(number_format($v / 1000, 1), '0'), '.') . 'K';
+            return number_format($v, 0);
+        };
+        $time = function ($t) {
+            return date('h:i A', strtotime($t));
+        };
 
-            // Helper: status tone class
-            $toneCls = function ($tone) {
-                if ($tone === 'g') return 'positive';
-                if ($tone === 'r') return 'negative';
-                return 'neutral';
-            };
+        // Change indicator vs previous period.
+        $changeHtml = function ($change, $goodUp = true) {
+            if ($change === null) {
+                return '<span class="sad-delta neutral">New</span>';
+            }
+            if ((float)$change == 0) {
+                return '<span class="sad-delta neutral">0%</span>';
+            }
+            $up = $change > 0;
+            $good = $goodUp ? $up : !$up;
+            $icon = $up ? 'mdi:arrow-top-right' : 'mdi:arrow-bottom-right';
+            return '<span class="sad-delta ' . ($good ? 'positive' : 'negative') . '">'
+                . '<iconify-icon icon="' . $icon . '" width="13" height="13"></iconify-icon>'
+                . ($up ? '+' : '') . $change . '%</span>';
+        };
 
-            $actionToneCls = function ($tone) {
-                if ($tone === 'warn') return 'status-orange';
-                if ($tone === 'bad') return 'status-red';
-                return 'status-blue';
-            };
+        // Mini bar sparkline (last 6 months, current month highlighted).
+        $spark = function ($values, $isMoney = false) use ($moneyShort) {
+            if (empty($values)) return '';
+            $max = max(max($values), 1);
+            $html = '<div class="sad-spark" aria-hidden="true">';
+            $last = count($values) - 1;
+            foreach ($values as $i => $v) {
+                $h = $v > 0 ? max(4, (int)round(($v / $max) * 34)) : 2;
+                $label = $isMoney ? 'LKR ' . $moneyShort($v) : number_format($v);
+                $html .= '<span class="' . ($i === $last ? 'on' : '') . '" style="height:' . $h . 'px" title="' . $label . '"></span>';
+            }
+            return $html . '</div>';
+        };
 
-            $batchStateCls = function ($state) {
-                if ($state === 'Running') return 'status-green';
-                if ($state === 'New intake') return 'status-blue';
-                if ($state === 'Ending soon') return 'status-orange';
-                return 'status-gray';
-            };
+        $toneVar = [
+            'good' => 'var(--dark-green)',
+            'warn' => 'var(--dark-orange)',
+            'bad' => 'var(--dark-red)',
+            'info' => 'var(--dark-theme)',
+        ];
+        $actionToneCls = ['warn' => 'status-orange', 'bad' => 'status-red', 'info' => 'status-blue'];
+        $batchStateCls = [
+            'Running' => 'status-green',
+            'New intake' => 'status-blue',
+            'Ending soon' => 'status-orange',
+            'Completed' => 'status-gray',
+        ];
+        $lectureStatusCls = [
+            'Ongoing' => 'status-green',
+            'Upcoming' => 'status-blue',
+            'Completed' => 'status-gray',
+            'Cancelled' => 'status-red',
+            'Postponed' => 'status-orange',
+        ];
 
-            $lectureStatusCls = function ($status) {
-                if ($status === 'Ongoing') return 'status-green';
-                if ($status === 'Upcoming') return 'status-blue';
-                return 'status-gray';
-            };
+        $liveNow = count(array_filter($liveClasses, function ($l) {
+            return $l['status'] === 'Live';
+        }));
+        $openActions = array_sum(array_column($actionItems, 'count'));
+        $mixMax = max(1, max(array_merge([0], array_map('intval', array_column($programmeMix, 'students')))));
+
+        $baseQuery = function ($overrides = []) use ($startDate, $endDate, $progFilter, $searchFilter) {
+            return http_build_query(array_merge([
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'programme' => $progFilter,
+                'search' => $searchFilter,
+            ], $overrides));
+        };
+
+        $emptyState = function ($text, $sub = '') use ($e) {
+            return '<div class="sad-empty"><iconify-icon icon="ph:empty-bold" width="22" height="22"></iconify-icon>'
+                . '<span class="fw-medium">' . $e($text) . '</span>'
+                . ($sub !== '' ? '<span class="text-12 sub-text">' . $e($sub) . '</span>' : '')
+                . '</div>';
+        };
 ?>
+        <style>
+            /* ─── Super Admin dashboard ─── white theme · square corners · no tinted card backgrounds ─── */
+            .sad {
+                width: 100%;
+                max-width: 100%;
+                min-width: 0;
+                color: var(--main-text-color);
+                /* Chart series: collected = theme blue, expected = lighter blue (validated pair) */
+                --sad-s1: var(--dark-theme);
+                --sad-s2: #9AAFFF;
+                --sad-muted: #C9D5FF;
+                --sad-grid: #F0F2F6;
+            }
 
-            <!-- Component styles ensuring single-row filter bar & theme harmony -->
-            <style>
-                .adx-page {
-                    width: 100%;
-                    color: var(--main-text-color);
+            [data-custom-theme="dark"] .sad {
+                --sad-muted: #34487E;
+                --sad-grid: #263247;
+            }
+
+            .sad *,
+            .sad *::before,
+            .sad *::after {
+                border-radius: 0;
+            }
+
+            .sad .min-w-0 {
+                min-width: 0;
+            }
+
+            .sad .text-13 {
+                font-size: 13px;
+            }
+
+            .sad-panel {
+                background: var(--custom-white);
+                border: 1px solid var(--line-color);
+                min-width: 0;
+                max-width: 100%;
+            }
+
+            .sad-panel-head {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                flex-wrap: wrap;
+                padding: 16px 20px;
+                border-bottom: 1px solid var(--line-color);
+            }
+
+            .sad-panel-body {
+                padding: 16px 20px;
+            }
+
+            .sad-title {
+                font-size: 16px;
+                font-weight: 600;
+                color: var(--dark-color);
+                margin: 0;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .sad-scope {
+                font-size: 11px;
+                font-weight: 600;
+                letter-spacing: .4px;
+                text-transform: uppercase;
+                color: var(--sub-text);
+                border: 1px solid var(--line-color);
+                padding: 2px 7px;
+                white-space: nowrap;
+            }
+
+            .sad-link {
+                font-size: 13px;
+                font-weight: 500;
+                color: var(--dark-theme);
+                text-decoration: none;
+                display: inline-flex;
+                align-items: center;
+                gap: 2px;
+                white-space: nowrap;
+            }
+
+            .sad-link:hover {
+                color: var(--main-button-hover);
+                text-decoration: underline;
+            }
+
+            /* Page header */
+            .sad-head {
+                display: flex;
+                align-items: flex-end;
+                justify-content: space-between;
+                gap: 16px;
+                flex-wrap: wrap;
+                margin-bottom: 16px;
+            }
+
+            .sad-head h1 {
+                font-size: 22px;
+                font-weight: 700;
+                color: var(--dark-color);
+                margin: 0 0 4px;
+            }
+
+            .sad-head p {
+                margin: 0;
+                font-size: 13px;
+                color: var(--sub-text);
+            }
+
+            .sad-head-stats {
+                display: flex;
+                border: 1px solid var(--line-color);
+                background: var(--custom-white);
+            }
+
+            .sad-head-stats div {
+                padding: 8px 16px;
+                border-left: 1px solid var(--line-color);
+                display: flex;
+                flex-direction: column;
+                min-width: 110px;
+            }
+
+            .sad-head-stats div:first-child {
+                border-left: 0;
+            }
+
+            .sad-head-stats b {
+                font-size: 18px;
+                color: var(--dark-color);
+                line-height: 1.2;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+
+            .sad-head-stats span {
+                font-size: 11.5px;
+                color: var(--sub-text);
+            }
+
+            /* Filter toolbar */
+            .sad-filter {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                width: 100%;
+                margin-bottom: 20px;
+                flex-wrap: nowrap;
+            }
+
+            .sad-f-date {
+                flex: 0 0 240px;
+                position: relative;
+            }
+
+            .sad-f-search {
+                flex: 1 1 auto;
+                min-width: 200px;
+                position: relative;
+            }
+
+            .sad-f-prog {
+                flex: 0 0 220px;
+            }
+
+            .sad-f-actions {
+                flex: 0 0 auto;
+                display: flex;
+                gap: 8px;
+            }
+
+            .sad-control {
+                height: 42px;
+                width: 100%;
+                background: var(--custom-white);
+                border: 1px solid var(--line-color);
+                font-size: 13.5px;
+                color: var(--main-text-color);
+                padding: 0 12px;
+                outline: none;
+            }
+
+            .sad-control:focus,
+            .sad-control:hover {
+                border-color: var(--dark-theme);
+            }
+
+            button.sad-control {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                cursor: pointer;
+            }
+
+            .sad-f-search .sad-control {
+                padding-left: 38px;
+                padding-right: 34px;
+            }
+
+            .sad-f-search .ico {
+                position: absolute;
+                left: 12px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: var(--sub-text);
+            }
+
+            .sad-f-search .clear {
+                position: absolute;
+                right: 10px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: var(--sub-text);
+                display: flex;
+            }
+
+            .sad-btn {
+                height: 42px;
+                padding: 0 18px;
+                border: 1px solid var(--dark-theme);
+                background: var(--dark-theme);
+                color: #fff;
+                font-size: 14px;
+                font-weight: 500;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                text-decoration: none;
+                cursor: pointer;
+                white-space: nowrap;
+            }
+
+            .sad-btn:hover {
+                background: var(--main-button-hover);
+                color: #fff;
+            }
+
+            .sad-btn.ghost {
+                background: var(--custom-white);
+                color: var(--main-text-color);
+                border-color: var(--line-color);
+            }
+
+            .sad-btn.ghost:hover {
+                color: var(--dark-theme);
+                border-color: var(--dark-theme);
+            }
+
+            .sad-btn.icon {
+                width: 42px;
+                padding: 0;
+                justify-content: center;
+            }
+
+            .sad-popover {
+                display: none;
+                position: absolute;
+                top: 46px;
+                left: 0;
+                z-index: 1050;
+                width: 320px;
+                padding: 16px;
+                background: var(--custom-white);
+                border: 1px solid var(--line-color);
+                box-shadow: 0 14px 35px rgba(15, 23, 42, .12);
+            }
+
+            .sad-popover.show {
+                display: block;
+            }
+
+            .sad-popover .cap {
+                display: block;
+                font-size: 11px;
+                font-weight: 600;
+                letter-spacing: .4px;
+                color: var(--sub-text);
+                margin-bottom: 8px;
+            }
+
+            .sad-presets {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 6px;
+                margin-bottom: 14px;
+            }
+
+            .sad-presets button {
+                height: 30px;
+                font-size: 12px;
+                border: 1px solid var(--line-color);
+                background: var(--custom-white);
+                color: var(--main-text-color);
+            }
+
+            .sad-presets button:hover {
+                color: var(--dark-theme);
+                border-color: var(--dark-theme);
+            }
+
+            .sad-popover input[type=date] {
+                height: 36px;
+                font-size: 13px;
+            }
+
+            /* KPI grid – one rectangle split into cells */
+            .sad-kpis {
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                background: var(--custom-white);
+                border: 1px solid var(--line-color);
+            }
+
+            .sad-kpi {
+                padding: 16px 20px;
+                border-left: 1px solid var(--line-color);
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                min-width: 0;
+                color: inherit;
+                text-decoration: none;
+                position: relative;
+                transition: box-shadow .2s ease;
+            }
+
+            .sad-kpi:first-child {
+                border-left: 0;
+            }
+
+            .sad-kpi:hover {
+                box-shadow: inset 0 -2px 0 var(--dark-theme);
+                color: inherit;
+            }
+
+            .sad-kpi-label {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 13px;
+                font-weight: 600;
+                color: var(--sub-text);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .sad-kpi-label iconify-icon {
+                color: var(--dark-theme);
+                flex-shrink: 0;
+            }
+
+            .sad-kpi-row {
+                display: flex;
+                align-items: flex-end;
+                justify-content: space-between;
+                gap: 10px;
+            }
+
+            .sad-kpi-value {
+                font-size: 28px;
+                font-weight: 700;
+                color: var(--dark-color);
+                line-height: 1;
+                letter-spacing: -.5px;
+                white-space: nowrap;
+            }
+
+            .sad-kpi-value .cur {
+                font-size: 12px;
+                font-weight: 500;
+                color: var(--sub-text);
+                letter-spacing: 0;
+                margin-right: 2px;
+            }
+
+            .sad-kpi.money .sad-kpi-value {
+                font-size: 23px;
+            }
+
+            .sad-kpi-meta {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 12px;
+                color: var(--sub-text);
+                flex-wrap: wrap;
+                min-height: 18px;
+            }
+
+            .sad-kpis.compact .sad-kpi {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                padding: 12px 20px;
+            }
+
+            .sad-kpis.compact .sad-kpi-value {
+                font-size: 20px;
+            }
+
+            .sad-group-label {
+                font-size: 11.5px;
+                font-weight: 600;
+                letter-spacing: .5px;
+                text-transform: uppercase;
+                color: var(--sub-text);
+                margin: 0 0 8px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .sad-delta {
+                display: inline-flex;
+                align-items: center;
+                gap: 1px;
+                font-size: 12px;
+                font-weight: 700;
+            }
+
+            .sad-delta.positive {
+                color: var(--dark-green);
+            }
+
+            .sad-delta.negative {
+                color: var(--dark-red);
+            }
+
+            .sad-delta.neutral {
+                color: var(--sub-text);
+            }
+
+            /* Thin meter */
+            .sad-meter {
+                height: 4px;
+                background: var(--line-color);
+                width: 100%;
+                overflow: hidden;
+            }
+
+            .sad-meter i {
+                display: block;
+                height: 100%;
+                background: var(--dark-theme);
+            }
+
+            .sad-spark {
+                display: flex;
+                align-items: flex-end;
+                gap: 3px;
+                height: 34px;
+                flex-shrink: 0;
+            }
+
+            .sad-spark span {
+                width: 7px;
+                background: var(--sad-muted);
+            }
+
+            .sad-spark span.on {
+                background: var(--dark-theme);
+            }
+
+            /* Pills */
+            .sad-pill {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                font-size: 12px;
+                font-weight: 600;
+                padding: 3px 9px;
+                white-space: nowrap;
+            }
+
+            .sad .status-gray {
+                background: var(--table-header-color);
+                color: var(--sub-text);
+            }
+
+            .sad-dot {
+                width: 7px;
+                height: 7px;
+                border-radius: 50% !important;
+                background: currentColor;
+                display: inline-block;
+            }
+
+            .sad-dot.pulse {
+                animation: sadPulse 1.4s ease-in-out infinite;
+            }
+
+            @keyframes sadPulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: .25; }
+            }
+
+            /* Live classes */
+            .sad-live {
+                display: grid;
+                grid-template-columns: 112px minmax(0, 1fr) auto;
+                gap: 16px;
+                align-items: center;
+                padding: 12px 20px;
+                border-bottom: 1px solid var(--line-color);
+            }
+
+            .sad-live:last-child {
+                border-bottom: 0;
+            }
+
+            .sad-live.is-live {
+                box-shadow: inset 3px 0 0 var(--dark-green);
+            }
+
+            .sad-live.is-ended {
+                opacity: .65;
+            }
+
+            .sad-live-time b {
+                display: block;
+                font-size: 14px;
+                color: var(--dark-color);
+            }
+
+            .sad-live-time span {
+                font-size: 12px;
+                color: var(--sub-text);
+            }
+
+            .sad-live-main b {
+                display: block;
+                font-size: 14px;
+                color: var(--dark-color);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .sad-live-main span {
+                font-size: 12.5px;
+                color: var(--sub-text);
+                display: block;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .sad-live-side {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .sad-type {
+                font-size: 12px;
+                color: var(--sub-text);
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+            }
+
+            .sad-join {
+                height: 30px;
+                padding: 0 12px;
+                font-size: 12.5px;
+            }
+
+            /* Action centre */
+            .sad-action {
+                display: grid;
+                grid-template-columns: 36px minmax(0, 1fr) auto 16px;
+                gap: 12px;
+                align-items: center;
+                padding: 12px 20px;
+                border-bottom: 1px solid var(--line-color);
+                color: inherit;
+                text-decoration: none;
+            }
+
+            .sad-action:last-child {
+                border-bottom: 0;
+            }
+
+            .sad-action:hover {
+                background: var(--table-header-color);
+                color: inherit;
+            }
+
+            .sad-action-ic {
+                width: 36px;
+                height: 36px;
+                border: 1px solid var(--line-color);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .sad-action b {
+                display: block;
+                font-size: 14px;
+                font-weight: 600;
+                color: var(--dark-color);
+            }
+
+            .sad-action small {
+                font-size: 12px;
+                color: var(--sub-text);
+            }
+
+            .sad-action .cnt {
+                font-size: 20px;
+                font-weight: 700;
+                color: var(--dark-color);
+                min-width: 32px;
+                text-align: right;
+            }
+
+            .sad-action .cnt.zero {
+                color: var(--sub-text);
+                font-weight: 500;
+            }
+
+            /* Snapshot list */
+            .sad-snap {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .sad-snap-row {
+                padding: 14px 20px;
+                border-bottom: 1px solid var(--line-color);
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .sad-snap-row:last-child {
+                border-bottom: 0;
+            }
+
+            .sad-snap-top {
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+                gap: 8px;
+            }
+
+            .sad-snap-top span {
+                font-size: 13px;
+                color: var(--sub-text);
+                font-weight: 500;
+            }
+
+            .sad-snap-top b {
+                font-size: 20px;
+                color: var(--dark-color);
+            }
+
+            .sad-split {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                border: 1px solid var(--line-color);
+            }
+
+            .sad-split div {
+                padding: 8px 10px;
+                border-left: 1px solid var(--line-color);
+            }
+
+            .sad-split div:first-child {
+                border-left: 0;
+            }
+
+            .sad-split b {
+                display: block;
+                font-size: 16px;
+                color: var(--dark-color);
+            }
+
+            .sad-split span {
+                font-size: 11.5px;
+                color: var(--sub-text);
+            }
+
+            /* Chart */
+            .sad-chart {
+                position: relative;
+                height: 280px;
+            }
+
+            .sad-chart.sm {
+                height: 220px;
+            }
+
+            .sad-chart.fill {
+                height: 100%;
+                min-height: 280px;
+            }
+
+            .sad-legend {
+                display: flex;
+                gap: 16px;
+                font-size: 12.5px;
+                color: var(--main-text-color);
+                flex-wrap: wrap;
+            }
+
+            .sad-legend span {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+            }
+
+            .sad-legend i {
+                width: 10px;
+                height: 10px;
+                display: inline-block;
+            }
+
+            /* Batches */
+            .sad-batch {
+                padding: 14px 20px;
+                border-bottom: 1px solid var(--line-color);
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .sad-batch:last-child {
+                border-bottom: 0;
+            }
+
+            .sad-batch-top {
+                display: flex;
+                justify-content: space-between;
+                gap: 12px;
+                align-items: flex-start;
+            }
+
+            .sad-batch-top b {
+                display: block;
+                font-size: 14px;
+                color: var(--dark-color);
+            }
+
+            .sad-batch-top small {
+                font-size: 12px;
+                color: var(--sub-text);
+            }
+
+            .sad-batch-foot {
+                display: flex;
+                justify-content: space-between;
+                font-size: 12px;
+                color: var(--sub-text);
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+
+            /* Tabs */
+            .sad-seg {
+                display: inline-flex;
+                border: 1px solid var(--line-color);
+            }
+
+            .sad-seg button {
+                border: 0;
+                background: var(--custom-white);
+                font-size: 12.5px;
+                font-weight: 500;
+                color: var(--sub-text);
+                padding: 6px 12px;
+            }
+
+            .sad-seg button + button {
+                border-left: 1px solid var(--line-color);
+            }
+
+            .sad-seg button.active {
+                color: var(--dark-theme);
+                box-shadow: inset 0 -2px 0 var(--dark-theme);
+            }
+
+            /* Dates */
+            .sad-date-row {
+                display: grid;
+                grid-template-columns: 48px minmax(0, 1fr) auto;
+                gap: 14px;
+                align-items: center;
+                padding: 12px 20px;
+                border-bottom: 1px solid var(--line-color);
+            }
+
+            .sad-date-row:last-child {
+                border-bottom: 0;
+            }
+
+            .sad-date-row.hl {
+                box-shadow: inset 3px 0 0 var(--dark-theme);
+            }
+
+            .sad-cal {
+                width: 48px;
+                border: 1px solid var(--line-color);
+                text-align: center;
+                line-height: 1.1;
+                padding: 4px 0;
+            }
+
+            .sad-cal small {
+                display: block;
+                font-size: 10.5px;
+                font-weight: 700;
+                color: var(--dark-theme);
+                letter-spacing: .5px;
+            }
+
+            .sad-cal b {
+                font-size: 18px;
+                color: var(--dark-color);
+            }
+
+            .sad-date-row .t {
+                display: block;
+                font-size: 14px;
+                font-weight: 600;
+                color: var(--dark-color);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .sad-date-row .s {
+                font-size: 12px;
+                color: var(--sub-text);
+            }
+
+            .sad-away {
+                font-size: 12px;
+                color: var(--sub-text);
+                white-space: nowrap;
+            }
+
+            .sad-away.soon {
+                color: var(--dark-orange);
+                font-weight: 600;
+            }
+
+            /* Programme mix */
+            .sad-mix {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) 70px;
+                gap: 6px 14px;
+                align-items: center;
+                padding: 12px 20px;
+                border-bottom: 1px solid var(--line-color);
+            }
+
+            .sad-mix:last-child {
+                border-bottom: 0;
+            }
+
+            .sad-mix .n {
+                font-size: 13.5px;
+                font-weight: 500;
+                color: var(--dark-color);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .sad-mix .v {
+                text-align: right;
+                font-size: 14px;
+                font-weight: 700;
+                color: var(--dark-color);
+            }
+
+            .sad-mix .sad-meter {
+                height: 6px;
+                grid-column: 1 / 2;
+            }
+
+            .sad-mix .sad-meter i.active {
+                background: var(--dark-theme);
+            }
+
+            .sad-mix .sad-meter i.rest {
+                background: var(--sad-s2);
+            }
+
+            .sad-mix small {
+                text-align: right;
+                font-size: 11.5px;
+                color: var(--sub-text);
+            }
+
+            /* Table */
+            .sad-table-wrap {
+                width: 100%;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .sad-table {
+                margin: 0;
+                width: 100%;
+                min-width: 920px;
+            }
+
+            .sad-table th {
+                background: var(--table-header-color) !important;
+                font-size: 13px;
+                font-weight: 500;
+                color: var(--main-text-color);
+                padding: 12px 16px !important;
+                white-space: nowrap;
+                border-bottom: 1px solid var(--line-color);
+            }
+
+            .sad-table td {
+                font-size: 13.5px;
+                padding: 12px 16px !important;
+                vertical-align: middle;
+                border-bottom: 1px solid var(--line-color);
+            }
+
+            .sad-table tr:last-child td {
+                border-bottom: 0;
+            }
+
+            .sad-avatar {
+                width: 34px;
+                height: 34px;
+                flex-shrink: 0;
+                background: var(--custom-white);
+                border: 1px solid var(--line-color);
+                color: var(--dark-theme);
+                font-size: 12.5px;
+                font-weight: 600;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                object-fit: cover;
+            }
+
+            .sad-empty {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                padding: 32px 16px;
+                color: var(--sub-text);
+                text-align: center;
+                font-size: 13.5px;
+            }
+
+            @media (max-width: 1199.98px) {
+                .sad-kpis {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
                 }
 
-                /* Header Greeting Bar */
-                .adx-top-bar {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    margin-bottom: 20px;
+                .sad-kpi:nth-child(3) {
+                    border-left: 0;
                 }
 
-                .adx-greeting {
-                    font-size: 20px;
-                    font-weight: 700;
-                    color: var(--dark-color);
-                    margin: 0;
+                .sad-kpi:nth-child(n+3) {
+                    border-top: 1px solid var(--line-color);
                 }
 
-                .adx-ver-badge {
-                    font-size: 11.5px;
-                    font-weight: 600;
-                    background-color: var(--table-header-color);
-                    color: var(--sub-text);
-                    padding: 4px 10px;
-                    border: 1px solid var(--line-color);
+                .sad-filter {
+                    flex-wrap: wrap;
                 }
 
-                .adx-avatar-box {
-                    width: 36px;
-                    height: 36px;
-                    background: var(--light-theme);
-                    color: var(--dark-theme);
-                    font-weight: 700;
-                    font-size: 13px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
+                .sad-f-search {
+                    flex-basis: calc(100% - 250px);
+                }
+            }
+
+            @media (max-width: 767.98px) {
+                .sad-kpis {
+                    grid-template-columns: 1fr;
                 }
 
-                /* ────────────────────────────────────────────────────────────
-                   SINGLE-ROW FILTER TOOLBAR (Guaranteed 1 single row on desktop)
-                   ──────────────────────────────────────────────────────────── */
-                .adx-filter-toolbar {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    width: 100%;
-                    margin-bottom: 22px;
-                    flex-wrap: nowrap;
-                    /* STRICTLY 1 ROW */
+                .sad-kpi {
+                    border-left: 0 !important;
                 }
 
-                .adx-filter-col-date {
-                    flex: 0 0 230px;
-                    width: 230px;
-                    position: relative;
+                .sad-kpi + .sad-kpi {
+                    border-top: 1px solid var(--line-color);
                 }
 
-                .adx-filter-col-search {
-                    flex: 1 1 auto;
-                    min-width: 200px;
-                    max-width: 460px;
+                .sad-f-date,
+                .sad-f-search,
+                .sad-f-prog {
+                    flex: 1 1 100%;
                 }
 
-                .adx-filter-col-prog {
-                    flex: 0 0 200px;
-                    width: 200px;
-                }
-
-                .adx-filter-col-actions {
-                    flex: 0 0 auto;
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    white-space: nowrap;
-                }
-
-                /* Uniform 42px height controls */
-                .adx-date-btn {
-                    height: 42px;
-                    width: 100%;
-                    background: var(--custom-white);
-                    border: 1px solid var(--line-color);
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    padding: 0 12px;
-                    font-size: 13.5px;
-                    font-weight: 500;
-                    color: var(--main-text-color);
-                    cursor: pointer;
-                    user-select: none;
-                }
-
-                .adx-date-btn:hover {
-                    border-color: var(--dark-theme);
-                }
-
-                .adx-search-wrap {
-                    position: relative;
-                    display: flex;
-                    align-items: center;
-                    width: 100%;
-                }
-
-                .adx-search-wrap .adx-s-icon {
-                    position: absolute;
-                    left: 12px;
-                    pointer-events: none;
-                    color: var(--sub-text);
-                }
-
-                .adx-search-input {
-                    height: 42px !important;
-                    width: 100% !important;
-                    background: var(--custom-white) !important;
-                    border: 1px solid var(--line-color) !important;
-                    border-radius: 0 !important;
-                    padding-left: 36px !important;
-                    padding-right: 30px !important;
-                    font-size: 13.5px !important;
-                    color: var(--main-text-color) !important;
-                    outline: none !important;
-                    box-shadow: none !important;
-                }
-
-                .adx-search-input:focus {
-                    border-color: var(--dark-theme) !important;
-                    box-shadow: 0 0 0 2px var(--light-theme) !important;
-                }
-
-                .adx-search-clear {
-                    position: absolute;
-                    right: 8px;
-                    color: var(--sub-text);
-                    text-decoration: none;
-                    padding: 4px;
-                    display: flex;
-                    align-items: center;
-                }
-
-                .adx-search-clear:hover {
-                    color: var(--dark-red);
-                }
-
-                .adx-prog-select {
-                    height: 42px !important;
-                    width: 100% !important;
-                    background: var(--custom-white) !important;
-                    border: 1px solid var(--line-color) !important;
-                    border-radius: 0 !important;
-                    padding: 0 12px !important;
-                    font-size: 13.5px !important;
-                    color: var(--main-text-color) !important;
-                    outline: none !important;
-                    cursor: pointer;
-                }
-
-                .adx-prog-select:focus {
-                    border-color: var(--dark-theme) !important;
-                }
-
-                .adx-btn-filter {
-                    height: 42px !important;
-                    padding: 0 18px !important;
-                    font-size: 13.5px !important;
-                    font-weight: 600 !important;
-                }
-
-                .adx-btn-reset {
-                    color: var(--sub-text);
-                    font-size: 13px;
-                    font-weight: 500;
-                    text-decoration: none;
-                }
-
-                .adx-btn-reset:hover {
-                    color: var(--dark-red);
-                }
-
-                .adx-btn-icon {
-                    height: 42px;
-                    width: 42px;
-                    border: 1px solid var(--line-color);
-                    background: var(--custom-white);
-                    color: var(--sub-text);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    cursor: pointer;
-                    text-decoration: none;
-                }
-
-                .adx-btn-icon:hover {
-                    color: var(--dark-theme);
-                    border-color: var(--dark-theme);
-                }
-
-                /* Date Dropdown Popover */
-                .adx-date-popover {
-                    display: none;
-                    position: absolute;
-                    top: 48px;
-                    left: 0;
-                    z-index: 1050;
-                    width: 320px;
-                    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.15);
-                    border: 1px solid var(--line-color);
-                    background: var(--custom-white);
-                }
-
-                .adx-date-popover.show {
-                    display: block;
-                }
-
-                .adx-preset-btn {
-                    padding: 5px 8px;
-                    font-size: 12px;
-                    font-weight: 500;
-                    border: 1px solid var(--line-color);
-                    background: var(--table-header-color);
-                    color: var(--main-text-color);
-                    cursor: pointer;
-                }
-
-                .adx-preset-btn:hover {
-                    background: var(--light-theme);
-                    color: var(--dark-theme);
-                    border-color: var(--dark-theme);
-                }
-
-                /* Pill tags */
-                .adx-pill {
-                    display: inline-block;
-                    min-width: 80px;
-                    text-align: center;
-                    font-size: 12.5px;
-                    padding: 3px 10px;
-                    white-space: nowrap;
-                    font-weight: 600;
-                }
-
-                .status-gray {
-                    background: var(--table-header-color);
-                    color: var(--sub-text);
-                    border: 1px solid var(--line-color);
-                }
-
-                .status-purple {
-                    background: var(--light-purple);
-                    color: var(--dark-purple);
-                }
-
-                /* Live Class featured box */
-                .lv {
-                    display: grid;
-                    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-                    gap: 12px;
-                }
-
-                @media (max-width: 768px) {
-                    .lv {
-                        grid-template-columns: 1fr;
-                    }
-
-                    .adx-filter-toolbar {
-                        flex-wrap: wrap;
-                    }
-                }
-
-                .lv-main {
-                    border: 1px solid var(--line-color);
-                    overflow: hidden;
-                    display: flex;
-                    flex-direction: column;
-                }
-
-                .lv-prev {
-                    position: relative;
-                    aspect-ratio: 16 / 9;
-                    background: var(--dark-theme);
-                    padding: 8px;
-                    display: grid;
-                    grid-template-columns: 1fr 46px;
+                .sad-live {
+                    grid-template-columns: 1fr;
                     gap: 6px;
                 }
 
-                .lv-slide {
-                    background: #F7F7F2;
-                    color: var(--dark-theme);
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                    align-items: center;
-                    gap: 4px;
-                    padding: 10px;
-                    text-align: center;
-                    font-size: 12px;
+                .sad-head-stats {
+                    width: 100%;
                 }
 
-                .lv-slide b {
-                    font-size: 14px;
-                }
-
-                .lv-side {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 4px;
-                }
-
-                .lv-side span {
+                .sad-head-stats div {
                     flex: 1;
-                    background: var(--light-theme);
+                    min-width: 0;
                 }
+            }
+        </style>
 
-                .lv-lect {
-                    position: absolute;
-                    left: 14px;
-                    bottom: 14px;
-                    width: 58px;
-                    height: 40px;
-                    background: var(--main-button-hover);
-                    border: 2px solid #2FA35A;
-                    color: #fff;
-                    display: grid;
-                    place-items: center;
-                    font-weight: 700;
-                    font-size: 13px;
-                }
+        <div class="sad p-0">
 
-                .lv-badge {
-                    position: absolute;
-                    left: 12px;
-                    top: 12px;
-                    background: #17803D;
-                    color: #fff;
-                    font-size: 11px;
-                    font-weight: 700;
-                    padding: 2px 8px;
-                    z-index: 1;
-                }
-
-                .lv-badge.off {
-                    background: #3A3A3C;
-                }
-
-                .lv-info {
-                    padding: 12px;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 5px;
-                }
-
-                .lv-list {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 8px;
-                }
-
-                .lv-item {
-                    display: flex;
-                    gap: 10px;
-                    align-items: center;
-                    padding: 8px 10px;
-                }
-
-                .lv-vi {
-                    width: 36px;
-                    height: 36px;
-                    flex: 0 0 36px;
-                }
-
-                .livetxt {
-                    font-size: 12.5px;
-                    font-weight: 700;
-                    color: var(--dark-red);
-                }
-
-                .ldot {
-                    display: inline-block;
-                    width: 8px;
-                    height: 8px;
-                    border-radius: 50%;
-                    background: #E5484D;
-                    margin-right: 5px;
-                    vertical-align: middle;
-                    animation: adxPulse 1.4s infinite;
-                }
-
-                @keyframes adxPulse {
-                    50% {
-                        opacity: .3;
-                    }
-                }
-
-                /* Action Centre items */
-                .mac {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    min-height: 46px;
-                    padding: 8px 12px;
-                    color: var(--main-text-color);
-                    font-size: 13.5px;
-                    text-decoration: none;
-                    transition: border-color 0.2s;
-                }
-
-                .mac:hover {
-                    border-color: var(--dark-theme) !important;
-                    color: var(--dark-theme);
-                }
-
-                .mac-ic {
-                    width: 32px;
-                    height: 32px;
-                    flex: 0 0 32px;
-                }
-
-                .mac .cnt {
-                    margin-left: auto;
-                    min-width: 36px;
-                    text-align: center;
-                    padding: 2px 8px;
-                    font-size: 13px;
-                    font-weight: 600;
-                }
-
-                /* Important dates */
-                .adx-seg {
-                    display: inline-flex;
-                    border: 1px solid var(--line-color);
-                }
-
-                .adx-seg button {
-                    min-height: 32px;
-                    padding: 0 10px;
-                    border: 0;
-                    background: transparent;
-                    color: var(--sub-text);
-                    font-weight: 600;
-                    font-size: 12.5px;
-                    cursor: pointer;
-                }
-
-                .adx-seg button.active {
-                    background: var(--dark-theme);
-                    color: #fff;
-                }
-
-                .cal-row {
-                    display: flex;
-                    gap: 12px;
-                    align-items: center;
-                    padding: 8px 10px;
-                }
-
-                .cal-row.hl {
-                    background: var(--light-red);
-                }
-
-                .cal-row.hl .ct {
-                    color: var(--dark-red);
-                }
-
-                .adx-dt {
-                    width: 50px;
-                    flex: 0 0 50px;
-                    text-align: center;
-                    padding: 4px 0;
-                    font-weight: 700;
-                    font-size: 17px;
-                    line-height: 1.1;
-                }
-
-                .adx-dt small {
-                    display: block;
-                    font-size: 10px;
-                    font-weight: 700;
-                }
-            </style>
-
-            <div class="adx-page mt-0 p-0">
-
-                <!-- 2. Single-Row Filter Toolbar (ALL IN ONE ROW) -->
-                <form method="GET" class="adx-filter-toolbar" id="filterForm">
-                    <!-- Date Range Box with Popover -->
-                    <div class="adx-filter-col-date">
-                        <button type="button" class="adx-date-btn" id="dateToggleBtn" onclick="toggleDatePopover()">
-                            <span class="d-flex align-items-center gap-2">
-                                <iconify-icon icon="mdi:calendar-range" width="17" height="17" class="text-secondary"></iconify-icon>
-                                <span id="labelRangeText"><?= htmlspecialchars($rangeLabel) ?></span>
-                            </span>
-                            <iconify-icon icon="mdi:chevron-down" width="16" height="16" class="text-muted"></iconify-icon>
-                        </button>
-
-                        <div class="adx-date-popover p-3" id="datePopover">
-                            <span class="text-12 fw-semibold text-secondary d-block mb-2">QUICK PRESETS</span>
-                            <div class="d-grid gap-1 mb-3" style="grid-template-columns: repeat(3, 1fr);">
-                                <button type="button" class="adx-preset-btn" onclick="applyPreset('today')">Today</button>
-                                <button type="button" class="adx-preset-btn" onclick="applyPreset('week')">This Week</button>
-                                <button type="button" class="adx-preset-btn" onclick="applyPreset('month')">This Month</button>
-                                <button type="button" class="adx-preset-btn" onclick="applyPreset('last')">Last Month</button>
-                                <button type="button" class="adx-preset-btn" onclick="applyPreset('3m')">3 Months</button>
-                                <button type="button" class="adx-preset-btn" onclick="applyPreset('6m')">6 Months</button>
-                            </div>
-
-                            <span class="text-12 fw-semibold text-secondary d-block mb-2">CUSTOM RANGE</span>
-                            <div class="mb-2">
-                                <label class="text-11 text-muted d-block">From</label>
-                                <input type="date" id="popFrom" name="start_date" value="<?= htmlspecialchars($startDate) ?>" class="form-control form-control-sm">
-                            </div>
-                            <div class="mb-3">
-                                <label class="text-11 text-muted d-block">To</label>
-                                <input type="date" id="popTo" name="end_date" value="<?= htmlspecialchars($endDate) ?>" class="form-control form-control-sm">
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <button type="button" class="btn btn-sm btn-light border text-12" onclick="toggleDatePopover()">Cancel</button>
-                                <button type="submit" class="custom-btn px-3 text-12" style="height:32px;">Apply</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Search Input -->
-                    <div class="adx-filter-col-search">
-                        <div class="adx-search-wrap">
-                            <iconify-icon icon="mdi:magnify" width="18" height="18" class="adx-s-icon"></iconify-icon>
-                            <input type="text" name="search" value="<?= htmlspecialchars($searchFilter) ?>" class="adx-search-input form-control custom-input" placeholder="Search intake, subject or lecturer...">
-                            <?php if (!empty($searchFilter)) { ?>
-                                <a href="?start_date=<?= urlencode($startDate) ?>&end_date=<?= urlencode($endDate) ?>&programme=<?= urlencode($progFilter) ?>" class="adx-search-clear" title="Clear">
-                                    <iconify-icon icon="mdi:close" width="16" height="16"></iconify-icon>
-                                </a>
-                            <?php } ?>
-                        </div>
-                    </div>
-
-                    <!-- Programme Select -->
-                    <div class="adx-filter-col-prog">
-                        <select name="programme" class="adx-prog-select" onchange="this.form.submit()">
-                            <option value="0">All Programmes</option>
-                            <?php foreach ($programmes as $p) { ?>
-                                <option value="<?= $p['id'] ?>" <?= $progFilter == $p['id'] ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($p['name']) ?>
-                                </option>
-                            <?php } ?>
-                        </select>
-                    </div>
-
-                    <!-- Filter Actions -->
-                    <div class="adx-filter-col-actions">
-                        <button type="submit" class="custom-btn adx-btn-filter">Filter</button>
-                        <?php if ($hasActiveFilter) { ?>
-                            <a href="superAdminDashboard" class="adx-btn-reset">Reset</a>
-                        <?php } ?>
-                        <a href="javascript:void(0)" onclick="window.location.reload()" class="adx-btn-icon" title="Refresh">
-                            <iconify-icon icon="mdi:refresh" width="18" height="18"></iconify-icon>
-                        </a>
-                    </div>
-                </form>
-
-                <!-- 3. ROW 1: Student Status Cards (Rendered in PHP) -->
-                <div class="row g-3 mb-3">
-                    <?php foreach ($studentCards as $c) { ?>
-                        <div class="col-12 col-md-6 col-lg-4 col-xl-3">
-                            <div class="stats-mini-card"
-                                <?= !empty($c['href'])
-                                    ? 'onclick="window.location.href=\'' . htmlspecialchars($c['href'], ENT_QUOTES, 'UTF-8') . '\'" style="cursor:pointer;"'
-                                    : '' ?>>
-                                <div class="stats-mini-top">
-                                    <div class="stats-mini-left">
-                                        <div class="stats-mini-icon">
-                                            <iconify-icon icon="<?= htmlspecialchars($c['icon']) ?>" width="16" height="16"></iconify-icon>
-                                        </div>
-                                        <span class="stats-mini-title"><?= htmlspecialchars($c['title']) ?></span>
-                                    </div>
-                                    <button type="button" class="stats-mini-menu">
-                                        <iconify-icon icon="mdi:dots-horizontal" width="16" height="16"></iconify-icon>
-                                    </button>
-                                </div>
-                                <div class="stats-mini-body">
-                                    <div class="stats-mini-content">
-                                        <div class="stats-mini-value"><?= number_format($c['value']) ?></div>
-                                        <div class="stats-mini-meta">
-                                            <?php if (isset($c['share'])) { ?>
-                                                <span class="stats-mini-change <?= $toneCls($c['share_tone'] ?? 'o') ?>">
-                                                    <?= $c['share'] ?>%
-                                                </span>
-                                            <?php } ?>
-                                            <span class="stats-mini-period"><?= htmlspecialchars($c['note']) ?></span>
-                                        </div>
-                                    </div>
-                                    <?= $renderBars($c['spark'] ?? []) ?>
-                                </div>
-                            </div>
-                        </div>
-                    <?php } ?>
+            <!-- Header -->
+            <div class="sad-head">
+                <div>
+                    <h1>Campus overview</h1>
+                    <p>
+                        <?= $e($rangeLabel) ?> · <?= $e($selectedProgramme) ?>
+                        <?php if ($searchFilter !== '') { ?> · “<?= $e($searchFilter) ?>”<?php } ?>
+                        · compared with <?= $e($prevLabel) ?>
+                    </p>
                 </div>
-
-                <!-- 4. ROW 2: Finance Cards (Rendered in PHP) -->
-                <div class="row g-3 mb-3">
-                    <?php foreach ($financeCards as $c) {
-                        $valStr = ($c['format'] ?? '') === 'money'
-                            ? '<span class="text-12 sub-text fw-medium">LKR </span>' . number_format($c['value'], 2)
-                            : number_format($c['value']);
-
-                        $changeStr = '';
-                        $changeCls = 'neutral';
-                        if (isset($c['change'])) {
-                            if ($c['change'] == 0) {
-                                $changeStr = '0%';
-                                $changeCls = 'neutral';
-                            } else {
-                                $changeStr = ($c['change'] > 0 ? '+' : '') . $c['change'] . '%';
-                                $good = !empty($c['good_up']) ? ($c['change'] > 0) : ($c['change'] < 0);
-                                $changeCls = $good ? 'positive' : 'negative';
-                            }
-                        }
-                    ?>
-                        <div class="col-12 col-md-6 col-lg-4 col-xl-3">
-                            <div class="stats-mini-card"
-                                <?= !empty($c['href'])
-                                    ? 'onclick="window.location.href=\'' . htmlspecialchars($c['href'], ENT_QUOTES, 'UTF-8') . '\'" style="cursor:pointer;"'
-                                    : '' ?>>
-                                <div class="stats-mini-top">
-                                    <div class="stats-mini-left">
-                                        <div class="stats-mini-icon">
-                                            <iconify-icon icon="<?= htmlspecialchars($c['icon']) ?>" width="16" height="16"></iconify-icon>
-                                        </div>
-                                        <span class="stats-mini-title"><?= htmlspecialchars($c['title']) ?></span>
-                                    </div>
-                                    <button type="button" class="stats-mini-menu">
-                                        <iconify-icon icon="mdi:dots-horizontal" width="16" height="16"></iconify-icon>
-                                    </button>
-                                </div>
-                                <div class="stats-mini-body">
-                                    <div class="stats-mini-content">
-                                        <div class="stats-mini-value"><?= $valStr ?></div>
-                                        <div class="stats-mini-meta">
-                                            <?php if ($changeStr !== '') { ?>
-                                                <span class="stats-mini-change <?= $changeCls ?>"><?= $changeStr ?></span>
-                                            <?php } ?>
-                                            <span class="stats-mini-period">vs previous period</span>
-                                        </div>
-                                    </div>
-                                    <?= $renderBars($c['spark'] ?? []) ?>
-                                </div>
-                            </div>
-                        </div>
-                    <?php } ?>
-                </div>
-
-                <!-- 5. ROW 3: System Overview Cards (Rendered in PHP) -->
-                <div class="row g-3 mb-4">
-                    <?php foreach ($systemCards as $c) { ?>
-                        <div class="col-12 col-md-6 col-lg-4 col-xl-3">
-                            <div class="stats-mini-card"
-                                <?= !empty($c['href'])
-                                    ? 'onclick="window.location.href=\'' . htmlspecialchars($c['href'], ENT_QUOTES, 'UTF-8') . '\'" style="cursor:pointer;"'
-                                    : '' ?>>
-                                <div class="stats-mini-top">
-                                    <div class="stats-mini-left">
-                                        <div class="stats-mini-icon">
-                                            <iconify-icon icon="<?= htmlspecialchars($c['icon']) ?>" width="16" height="16"></iconify-icon>
-                                        </div>
-                                        <span class="stats-mini-title"><?= htmlspecialchars($c['title']) ?></span>
-                                    </div>
-                                    <button type="button" class="stats-mini-menu">
-                                        <iconify-icon icon="mdi:dots-horizontal" width="16" height="16"></iconify-icon>
-                                    </button>
-                                </div>
-                                <div class="stats-mini-body">
-                                    <div class="stats-mini-content">
-                                        <div class="stats-mini-value"><?= number_format($c['value']) ?></div>
-                                        <div class="stats-mini-meta">
-                                            <span class="stats-mini-period"><?= htmlspecialchars($c['note']) ?></span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    <?php } ?>
-                </div>
-
-                <!-- 6. MIDDLE SECTION 1: Live Classes (Today) & Management Action Centre -->
-                <div class="row g-4 mb-4">
-                    <!-- Live Classes (Today) -->
-
-                    <!-- Management Action Centre -->
-                    <div class="col-12 col-xl-6">
-                        <section class="component-theme p-4 h-100 d-flex flex-column gap-3">
-                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                <span class="sub-topic">Management Action Centre</span>
-                            </div>
-                            <div class="d-flex flex-column gap-2">
-                                <?php foreach ($actionItems as $a) {
-                                    $tone = $actionToneCls($a['tone']);
-                                ?>
-                                    <a class="mac bl-solid component-theme" href="<?= htmlspecialchars($a['href']) ?>">
-                                        <span class="mac-ic d-flex align-items-center justify-content-center <?= $tone ?>">
-                                            <iconify-icon icon="<?= htmlspecialchars($a['icon']) ?>" width="18" height="18"></iconify-icon>
-                                        </span>
-                                        <span><?= htmlspecialchars($a['label']) ?></span>
-                                        <b class="cnt <?= $a['count'] ? $tone : 'status-green' ?>">
-                                            <?= number_format($a['count']) ?>
-                                        </b>
-                                    </a>
-                                <?php } ?>
-                            </div>
-                        </section>
+                <div class="sad-head-stats">
+                    <div>
+                        <b><?php if ($liveNow > 0) { ?><span class="sad-dot pulse" style="color:var(--dark-green)"></span><?php } ?><?= $liveNow ?></b>
+                        <span>Classes live now</span>
                     </div>
-
-                    <div class="col-12 col-xl-6">
-                        <section class="component-theme p-4 h-100 d-flex flex-column gap-3">
-                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                <span class="sub-topic">Important Dates</span>
-                                <div class="d-flex align-items-center flex-wrap gap-3">
-                                    <div class="adx-seg" role="group">
-                                        <button type="button" id="tabBtnEvents" class="active" onclick="showCalTab('events')">
-                                            Events (<?= count($eventsList) ?>)
-                                        </button>
-                                        <button type="button" id="tabBtnDeadlines" onclick="showCalTab('deadlines')">
-                                            Deadlines (<?= count($deadlinesList) ?>)
-                                        </button>
-                                    </div>
-                                    <a class="text-14 dark-theme text-decoration-none" href="event-calender">View calendar</a>
-                                </div>
-                            </div>
-
-                            <!-- Events List Container -->
-                            <div id="eventsTabContent" class="d-flex flex-column gap-2">
-                                <?php if (!empty($eventsList)) {
-                                    foreach ($eventsList as $e) {
-                                        $ed = new DateTime($e['date']);
-                                ?>
-                                        <div class="cal-row <?= !empty($e['highlight']) ? 'hl' : '' ?>">
-                                            <span class="adx-dt status-blue">
-                                                <small><?= strtoupper($ed->format('M')) ?></small>
-                                                <?= $ed->format('d') ?>
-                                            </span>
-                                            <span>
-                                                <b class="ct text-14 text-dark-color d-block"><?= htmlspecialchars($e['title']) ?></b>
-                                                <span class="text-12 sub-text"><?= htmlspecialchars($e['time']) ?></span>
-                                            </span>
-                                        </div>
-                                    <?php }
-                                } else { ?>
-                                    <div class="col-12 px-4 py-3 component-theme">
-                                        <div class="row align-items-center justify-content-center">
-                                            <div class="d-flex flex-grow-1 align-items-center justify-content-center">
-                                                <div class="no-data-state">
-                                                    <div class="no-data-icon-wrap">
-                                                        <iconify-icon icon="ph:empty-bold"></iconify-icon>
-                                                    </div>
-                                                    <p class="no-data-text">No data</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                <?php } ?>
-                            </div>
-
-                            <!-- Deadlines List Container -->
-                            <div id="deadlinesTabContent" class="d-flex flex-column gap-2 d-none">
-                                <?php if (!empty($deadlinesList)) {
-                                    foreach ($deadlinesList as $d) {
-                                        $dd = new DateTime($d['date']);
-                                ?>
-                                        <div class="cal-row <?= !empty($d['highlight']) ? 'hl' : '' ?>">
-                                            <span class="adx-dt status-purple">
-                                                <small><?= strtoupper($dd->format('M')) ?></small>
-                                                <?= $dd->format('d') ?>
-                                            </span>
-                                            <span>
-                                                <b class="ct text-14 text-dark-color d-block"><?= htmlspecialchars($d['title']) ?></b>
-                                            </span>
-                                        </div>
-                                    <?php }
-                                } else { ?>
-                                    <div class="col-12 px-4 py-3 component-theme">
-                                        <div class="row align-items-center justify-content-center">
-                                            <div class="d-flex flex-grow-1 align-items-center justify-content-center">
-                                                <div class="no-data-state">
-                                                    <div class="no-data-icon-wrap">
-                                                        <iconify-icon icon="ph:empty-bold"></iconify-icon>
-                                                    </div>
-                                                    <p class="no-data-text">No data</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                <?php } ?>
-                            </div>
-                        </section>
+                    <div>
+                        <b><?= number_format($insights['campus_active']) ?></b>
+                        <span>Active enrolments</span>
+                    </div>
+                    <div>
+                        <b><?= number_format($openActions) ?></b>
+                        <span>Items need action</span>
                     </div>
                 </div>
-
-                <!-- 8. BOTTOM SECTION: Lectures Schedule Table (Rendered in PHP) -->
-                <section class="component-theme p-4 d-flex flex-column gap-3 mb-5">
-                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <span class="sub-topic d-flex align-items-center gap-2">
-                            Lectures – <?= htmlspecialchars($rangeLabel) ?> (<?= count($lecturesList) ?>)
-                        </span>
-                        <a class="text-14 dark-theme text-decoration-none" href="lecture-schedule">View all</a>
-                    </div>
-
-                    <div class="table-responsive">
-                        <table class="table bl-solid m-0 p-0 g-0" id="students-table">
-                            <thead>
-                                <tr class="bg-table-header">
-                                    <th scope="col" class="py-3 bg-table-header text-14 main-text fw-medium align-content-center">#</th>
-                                    <th scope="col" class="py-3 bg-table-header text-14 main-text fw-medium align-content-center">Lecturer’s Name</th>
-                                    <th scope="col" class="py-3 bg-table-header text-14 main-text fw-medium align-content-center">Lecture Type</th>
-                                    <th scope="col" class="py-3 bg-table-header text-14 main-text fw-medium align-content-center">Intake / Batch</th>
-                                    <th scope="col" class="py-3 bg-table-header text-14 main-text fw-medium align-content-center">Subject</th>
-                                    <th scope="col" class="py-3 bg-table-header text-14 main-text fw-medium align-content-center">Date &amp; Time</th>
-                                    <th scope="col" class="py-3 bg-table-header text-14 main-text fw-medium align-content-center">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (!empty($lecturesList)) {
-                                    foreach ($lecturesList as $idx => $l) {
-                                        $ldt = new DateTime($l['date']);
-                                        $st = (new DateTime($l['start']))->format('h:i A');
-                                        $et = (new DateTime($l['end']))->format('h:i A');
-                                        $typeCls = ($l['type'] === 'Online') ? 'status-green' : 'status-blue';
-                                        $stCls = $lectureStatusCls($l['status']);
-                                ?>
-                                        <tr>
-                                            <td><?= $idx + 1 ?></td>
-                                            <td>
-                                                <div class="d-flex align-items-center gap-2">
-                                                    <?php if (!empty($l['profile'])) { ?>
-                                                        <img class="hwr-40" style="object-fit:cover" src="<?= htmlspecialchars($l['profile']) ?>" alt="">
-                                                    <?php } else { ?>
-                                                        <div class="d-flex hwr-40 dark-theme bg-light-theme align-items-center justify-content-center fw-medium text-14 flex-shrink-0">
-                                                            <?= htmlspecialchars($l['initials']) ?>
-                                                        </div>
-                                                    <?php } ?>
-                                                    <span class="text-dark-color fw-medium"><?= htmlspecialchars($l['lecturer']) ?></span>
-                                                </div>
-                                            </td>
-                                            <td><span class="adx-pill <?= $typeCls ?>"><?= htmlspecialchars($l['type']) ?></span></td>
-                                            <td><?= htmlspecialchars($l['intake']) ?></td>
-                                            <td><?= htmlspecialchars($l['subject']) ?></td>
-                                            <td>
-                                                <?= $ldt->format('d M Y') ?><br>
-                                                <span class="text-12 sub-text"><?= $st ?> - <?= $et ?></span>
-                                            </td>
-                                            <td><span class="adx-pill <?= $stCls ?>"><?= htmlspecialchars($l['status']) ?></span></td>
-                                        </tr>
-                                    <?php }
-                                } else { ?>
-                                    <tr>
-                                        <td colspan="7">
-                                            <div class="no-data-state py-4">
-                                                <div class="no-data-icon-wrap"><iconify-icon icon="ph:empty-bold"></iconify-icon></div>
-                                                <p class="no-data-text">No lectures found</p>
-                                                <span class="text-12 sub-text">No lectures scheduled for this date range and filter criteria.</span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                <?php } ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-
             </div>
 
-            <!-- Lightweight Popover & Tab Toggle Script (No DOM Generation) -->
-            <script>
-                function toggleDatePopover() {
+            <!-- Filters -->
+            <form method="GET" class="sad-filter" id="filterForm" autocomplete="off">
+                <div class="sad-f-date">
+                    <button type="button" class="sad-control" id="dateToggleBtn" onclick="sadToggleDate()" aria-haspopup="true" aria-expanded="false">
+                        <span class="d-flex align-items-center gap-2">
+                            <iconify-icon icon="mdi:calendar-range" width="17" height="17" class="sub-text"></iconify-icon>
+                            <span><?= $e($rangeLabel) ?></span>
+                        </span>
+                        <iconify-icon icon="mdi:chevron-down" width="16" height="16" class="sub-text"></iconify-icon>
+                    </button>
+                    <div class="sad-popover" id="datePopover">
+                        <span class="cap">QUICK PRESETS</span>
+                        <div class="sad-presets">
+                            <button type="button" onclick="sadPreset('today')">Today</button>
+                            <button type="button" onclick="sadPreset('week')">Last 7 days</button>
+                            <button type="button" onclick="sadPreset('month')">This month</button>
+                            <button type="button" onclick="sadPreset('last')">Last month</button>
+                            <button type="button" onclick="sadPreset('3m')">3 months</button>
+                            <button type="button" onclick="sadPreset('6m')">6 months</button>
+                        </div>
+                        <span class="cap">CUSTOM RANGE</span>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="text-12 sub-text d-block mb-1" for="popFrom">From</label>
+                                <input type="date" id="popFrom" name="start_date" value="<?= $e($startDate) ?>" max="<?= $e($todayIso) ?>" class="form-control br-0">
+                            </div>
+                            <div class="col-6">
+                                <label class="text-12 sub-text d-block mb-1" for="popTo">To</label>
+                                <input type="date" id="popTo" name="end_date" value="<?= $e($endDate) ?>" class="form-control br-0">
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <button type="button" class="sad-btn ghost" style="height:34px" onclick="sadToggleDate()">Cancel</button>
+                            <button type="submit" class="sad-btn" style="height:34px">Apply</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sad-f-search">
+                    <iconify-icon icon="mdi:magnify" width="18" height="18" class="ico"></iconify-icon>
+                    <input type="text" name="search" value="<?= $e($searchFilter) ?>" class="sad-control" placeholder="Search student, intake, subject or lecturer...">
+                    <?php if ($searchFilter !== '') { ?>
+                        <a href="?<?= $e($baseQuery(['search' => ''])) ?>" class="clear" title="Clear search">
+                            <iconify-icon icon="mdi:close" width="16" height="16"></iconify-icon>
+                        </a>
+                    <?php } ?>
+                </div>
+
+                <div class="sad-f-prog">
+                    <select name="programme" class="sad-control" onchange="this.form.submit()" aria-label="Programme">
+                        <option value="0">All programmes</option>
+                        <?php foreach ($programmes as $p) { ?>
+                            <option value="<?= (int)$p['id'] ?>" <?= $progFilter === (int)$p['id'] ? 'selected' : '' ?>><?= $e($p['name']) ?></option>
+                        <?php } ?>
+                    </select>
+                </div>
+
+                <div class="sad-f-actions">
+                    <button type="submit" class="sad-btn">
+                        <iconify-icon icon="mdi:filter-variant" width="17" height="17"></iconify-icon>Filter
+                    </button>
+                    <?php if ($hasActiveFilter) { ?>
+                        <a href="dashboard" class="sad-btn ghost">Reset</a>
+                    <?php } ?>
+                    <a href="javascript:void(0)" onclick="window.location.reload()" class="sad-btn ghost icon" title="Refresh">
+                        <iconify-icon icon="mdi:refresh" width="18" height="18"></iconify-icon>
+                    </a>
+                </div>
+            </form>
+
+            <!-- Students -->
+            <p class="sad-group-label">Students <span class="sad-scope">Admitted in period</span></p>
+            <div class="sad-kpis mb-4">
+                <?php foreach ($studentCards as $c) { ?>
+                    <a class="sad-kpi" href="<?= $e($c['href']) ?>">
+                        <span class="sad-kpi-label">
+                            <iconify-icon icon="<?= $e($c['icon']) ?>" width="18" height="18"></iconify-icon><?= $e($c['title']) ?>
+                        </span>
+                        <span class="sad-kpi-value"><?= number_format($c['value']) ?></span>
+                        <?php if (isset($c['share'])) { ?>
+                            <span class="sad-meter" title="<?= $c['share'] ?>% of students admitted in period">
+                                <i style="width:<?= min(100, (float)$c['share']) ?>%; background:<?= $toneVar[$c['tone']] ?>"></i>
+                            </span>
+                            <span class="sad-kpi-meta"><b class="text-dark-color"><?= $c['share'] ?>%</b> of admitted students</span>
+                        <?php } else { ?>
+                            <?php $ofAll = $insights['campus_total'] > 0 ? round($c['value'] / $insights['campus_total'] * 100, 1) : 0; ?>
+                            <span class="sad-meter" title="<?= $ofAll ?>% of all enrolments"><i style="width:<?= min(100, $ofAll) ?>%"></i></span>
+                            <span class="sad-kpi-meta"><b class="text-dark-color"><?= $ofAll ?>%</b> of <?= number_format($insights['campus_total']) ?> enrolments all time</span>
+                        <?php } ?>
+                    </a>
+                <?php } ?>
+            </div>
+
+            <!-- Finance -->
+            <p class="sad-group-label">Admissions &amp; finance <span class="sad-scope">Selected period</span></p>
+            <div class="sad-kpis mb-4">
+                <?php foreach ($financeCards as $c) {
+                    $isMoney = ($c['format'] ?? '') === 'money';
+                ?>
+                    <a class="sad-kpi <?= $isMoney ? 'money' : '' ?>" href="<?= $e($c['href']) ?>">
+                        <span class="sad-kpi-label">
+                            <iconify-icon icon="<?= $e($c['icon']) ?>" width="18" height="18"></iconify-icon><?= $e($c['title']) ?>
+                        </span>
+                        <span class="sad-kpi-row">
+                            <span class="sad-kpi-value" title="<?= $isMoney ? 'LKR ' . $money($c['value']) : '' ?>">
+                                <?php if ($isMoney) { ?><span class="cur">LKR</span><?= $money($c['value']) ?><?php } else { ?><?= number_format($c['value']) ?><?php } ?>
+                            </span>
+                            <?= isset($c['spark']) ? $spark($c['spark'], $isMoney) : '' ?>
+                        </span>
+                        <span class="sad-kpi-meta">
+                            <?php if (array_key_exists('change', $c)) { ?>
+                                <?= $changeHtml($c['change'], $c['good_up']) ?> vs previous period
+                            <?php } elseif (isset($c['rate'])) { ?>
+                                <span class="sad-meter" style="width:70px"><i style="width:<?= (float)$c['rate'] ?>%"></i></span>
+                                <b class="text-dark-color"><?= $c['rate'] ?>%</b> collected of due
+                            <?php } ?>
+                        </span>
+                    </a>
+                <?php } ?>
+            </div>
+
+            <!-- System -->
+            <p class="sad-group-label">System <span class="sad-scope">All campus</span></p>
+            <div class="sad-kpis compact mb-4">
+                <?php foreach ($systemCards as $c) { ?>
+                    <a class="sad-kpi" href="<?= $e($c['href']) ?>">
+                        <span class="sad-kpi-label">
+                            <iconify-icon icon="<?= $e($c['icon']) ?>" width="18" height="18"></iconify-icon><?= $e($c['title']) ?>
+                            <small class="fw-normal">· <?= $e($c['note']) ?></small>
+                        </span>
+                        <span class="sad-kpi-value"><?= number_format($c['value']) ?></span>
+                    </a>
+                <?php } ?>
+            </div>
+
+            <div class="row g-4 mb-4">
+                <!-- Live classes (today) -->
+                <div class="col-12 col-xl-7">
+                    <section class="sad-panel h-100 d-flex flex-column">
+                        <div class="sad-panel-head">
+                            <h2 class="sad-title">
+                                Live Classes
+                                <span class="sad-scope">Today · <?= $e($fmtDate($todayIso, 'd M')) ?></span>
+                            </h2>
+                            <div class="d-flex align-items-center gap-3">
+                                <?php if ($liveNow > 0) { ?>
+                                    <span class="sad-pill status-green"><span class="sad-dot pulse"></span><?= $liveNow ?> live now</span>
+                                <?php } ?>
+                                <a class="sad-link" href="ongoing-lecture-attendance">Monitor<iconify-icon icon="mdi:chevron-right" width="16" height="16"></iconify-icon></a>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <?php if (!empty($liveClasses)) {
+                                foreach ($liveClasses as $l) {
+                                    $rowCls = $l['status'] === 'Live' ? 'is-live' : ($l['status'] === 'Ended' ? 'is-ended' : '');
+                            ?>
+                                    <div class="sad-live <?= $rowCls ?>">
+                                        <div class="sad-live-time">
+                                            <b><?= $time($l['start']) ?></b>
+                                            <span>to <?= $time($l['end']) ?></span>
+                                        </div>
+                                        <div class="sad-live-main">
+                                            <b><?= $e($l['title']) ?></b>
+                                            <span><?= $e($l['intake']) ?> · <?= $e($l['lecturer']) ?></span>
+                                        </div>
+                                        <div class="sad-live-side">
+                                            <span class="sad-type">
+                                                <iconify-icon icon="<?= $l['type'] === 'Online' ? 'mdi:video-outline' : 'mdi:map-marker-outline' ?>" width="15" height="15"></iconify-icon><?= $e($l['type']) ?>
+                                            </span>
+                                            <?php if ($l['status'] === 'Live') { ?>
+                                                <span class="sad-pill status-green"><span class="sad-dot pulse"></span>Live</span>
+                                                <?php if ($l['link'] !== '') { ?>
+                                                    <a class="sad-btn sad-join" href="<?= $e($l['link']) ?>" target="_blank" rel="noopener">Join</a>
+                                                <?php } ?>
+                                            <?php } elseif ($l['status'] === 'Upcoming') { ?>
+                                                <span class="sad-pill status-blue">Upcoming</span>
+                                            <?php } else { ?>
+                                                <span class="sad-pill status-gray">Ended</span>
+                                            <?php } ?>
+                                        </div>
+                                    </div>
+                            <?php }
+                            } else {
+                                echo $emptyState('No classes scheduled for today', 'Physical and online lectures scheduled for today appear here.');
+                            } ?>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Management action centre -->
+                <div class="col-12 col-xl-5">
+                    <section class="sad-panel h-100">
+                        <div class="sad-panel-head">
+                            <h2 class="sad-title">Management Action Centre</h2>
+                            <span class="sad-scope">Right now</span>
+                        </div>
+                        <div>
+                            <?php foreach ($actionItems as $a) {
+                                $tone = $actionToneCls[$a['tone']] ?? 'status-blue';
+                                $tag = $a['href'] !== '' ? 'a' : 'div';
+                            ?>
+                                <<?= $tag ?> class="sad-action" <?= $a['href'] !== '' ? 'href="' . $e($a['href']) . '"' : '' ?>>
+                                    <span class="sad-action-ic" style="color:<?= $toneVar[$a['tone']] ?? 'var(--dark-theme)' ?>">
+                                        <iconify-icon icon="<?= $e($a['icon']) ?>" width="19" height="19"></iconify-icon>
+                                    </span>
+                                    <span class="min-w-0">
+                                        <b><?= $e($a['label']) ?></b>
+                                        <small><?= $e($a['hint']) ?></small>
+                                    </span>
+                                    <?php if ($a['count'] > 0) { ?>
+                                        <span class="cnt"><?= number_format($a['count']) ?></span>
+                                    <?php } else { ?>
+                                        <span class="cnt zero" title="All clear"><iconify-icon icon="mdi:check" width="18" height="18" style="color:var(--dark-green)"></iconify-icon></span>
+                                    <?php } ?>
+                                    <iconify-icon icon="mdi:chevron-right" width="16" height="16" class="sub-text"></iconify-icon>
+                                </<?= $tag ?>>
+                            <?php } ?>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <div class="row g-4 mb-4">
+                <!-- Fee collection trend -->
+                <div class="col-12 col-xl-8">
+                    <section class="sad-panel h-100 d-flex flex-column">
+                        <div class="sad-panel-head">
+                            <h2 class="sad-title">Fee collection <span class="sad-scope">Last 6 months</span></h2>
+                            <div class="sad-legend">
+                                <span><i style="background:var(--sad-s2)"></i>Expected (due)</span>
+                                <span><i style="background:var(--sad-s1)"></i>Collected</span>
+                            </div>
+                        </div>
+                        <div class="sad-panel-body flex-grow-1">
+                            <div class="sad-chart fill">
+                                <canvas id="sadFeeChart" role="img" aria-label="Expected versus collected fees per month for the last six months"></canvas>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Snapshot -->
+                <div class="col-12 col-xl-4">
+                    <section class="sad-panel h-100 d-flex flex-column">
+                        <div class="sad-panel-head">
+                            <h2 class="sad-title">Period snapshot</h2>
+                            <span class="sad-scope">Selected period</span>
+                        </div>
+                        <div class="sad-snap flex-grow-1">
+                            <div class="sad-snap-row">
+                                <div class="sad-snap-top">
+                                    <span>Collection rate</span>
+                                    <b><?= $insights['collection_rate'] ?>%</b>
+                                </div>
+                                <span class="sad-meter"><i style="width:<?= (float)$insights['collection_rate'] ?>%"></i></span>
+                                <span class="text-12 sub-text">LKR <?= $money($insights['collected_on_due']) ?> collected against instalments due in period</span>
+                            </div>
+                            <div class="sad-snap-row">
+                                <div class="sad-snap-top">
+                                    <span>Outstanding today</span>
+                                    <b><span class="text-12 sub-text fw-medium">LKR</span> <?= $money($insights['outstanding']) ?></b>
+                                </div>
+                                <span class="text-12 sub-text"><?= number_format($insights['outstanding_students']) ?> active students with overdue balances</span>
+                            </div>
+                            <div class="sad-snap-row">
+                                <div class="sad-snap-top">
+                                    <span>Attendance rate</span>
+                                    <b><?= $insights['attendance_rate'] !== null ? $insights['attendance_rate'] . '%' : '—' ?></b>
+                                </div>
+                                <span class="sad-meter"><i style="width:<?= (float)($insights['attendance_rate'] ?? 0) ?>%; background:<?= ($insights['attendance_rate'] !== null && $insights['attendance_rate'] < AdminDashboardSummary::ATTENDANCE_THRESHOLD) ? 'var(--dark-orange)' : 'var(--dark-theme)' ?>"></i></span>
+                                <span class="text-12 sub-text">
+                                    <?php if ($insights['attendance_change'] !== null) { ?>
+                                        <?php $ac = $insights['attendance_change']; ?>
+                                        <b class="<?= $ac >= 0 ? 'text-success' : 'text-danger' ?>"><?= ($ac > 0 ? '+' : '') . $ac ?> pts</b> vs previous period ·
+                                    <?php } ?>
+                                    <?= number_format($insights['attendance_marked']) ?> marks recorded
+                                </span>
+                            </div>
+                            <div class="sad-snap-row">
+                                <div class="sad-snap-top">
+                                    <span>Lectures held</span>
+                                    <b><?= number_format($insights['lectures_total']) ?></b>
+                                </div>
+                                <div class="sad-split">
+                                    <div><b><?= number_format($insights['lectures_physical']) ?></b><span>Physical</span></div>
+                                    <div><b><?= number_format($insights['lectures_online']) ?></b><span>Online</span></div>
+                                    <div><b><?= number_format($insights['lectures_cancelled']) ?></b><span>Cancelled</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <div class="row g-4 mb-4">
+                <!-- Batches -->
+                <div class="col-12 col-xl-6">
+                    <section class="sad-panel h-100">
+                        <div class="sad-panel-head">
+                            <h2 class="sad-title">Batches <span class="sad-scope">Course progress</span></h2>
+                            <a class="sad-link" href="intakes">All intakes<iconify-icon icon="mdi:chevron-right" width="16" height="16"></iconify-icon></a>
+                        </div>
+                        <div>
+                            <?php if (!empty($batchesList)) {
+                                foreach ($batchesList as $b) {
+                            ?>
+                                    <div class="sad-batch">
+                                        <div class="sad-batch-top">
+                                            <span class="min-w-0">
+                                                <b><?= $e($b['intake']) ?></b>
+                                                <small><?= $e($b['programme']) ?></small>
+                                            </span>
+                                            <span class="sad-pill <?= $batchStateCls[$b['state']] ?? 'status-gray' ?>"><?= $e($b['state']) ?></span>
+                                        </div>
+                                        <span class="sad-meter" title="<?= $b['progress'] !== null ? $b['progress'] . '% of course duration' : 'Dates not set' ?>">
+                                            <i style="width:<?= (int)($b['progress'] ?? 0) ?>%"></i>
+                                        </span>
+                                        <div class="sad-batch-foot">
+                                            <span>
+                                                <b class="text-dark-color"><?= number_format($b['active']) ?></b> active of <?= number_format($b['students']) ?> students
+                                            </span>
+                                            <span>
+                                                <?php if ($b['progress'] === null) { ?>
+                                                    Start / end dates not set
+                                                <?php } else { ?>
+                                                    <b class="text-dark-color"><?= $b['progress'] ?>%</b>
+                                                    · <?= $e($fmtDate($b['start'], 'd M y')) ?> – <?= $e($fmtDate($b['end'], 'd M y')) ?>
+                                                    <?php if ($b['days_left'] !== null) { ?> · <?= number_format($b['days_left']) ?> days left<?php } ?>
+                                                <?php } ?>
+                                            </span>
+                                        </div>
+                                    </div>
+                            <?php }
+                            } else {
+                                echo $emptyState('No batches found', 'Try another programme or clear the search.');
+                            } ?>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Important dates -->
+                <div class="col-12 col-xl-6">
+                    <section class="sad-panel h-100">
+                        <div class="sad-panel-head">
+                            <h2 class="sad-title">Important Dates</h2>
+                            <div class="d-flex align-items-center gap-3 flex-wrap">
+                                <div class="sad-seg" role="tablist">
+                                    <button type="button" id="tabBtnEvents" class="active" role="tab" onclick="sadCalTab('events')">Events (<?= count($eventsList) ?>)</button>
+                                    <button type="button" id="tabBtnDeadlines" role="tab" onclick="sadCalTab('deadlines')">Deadlines (<?= count($deadlinesList) ?>)</button>
+                                </div>
+                                <a class="sad-link" href="event-calender">Calendar<iconify-icon icon="mdi:chevron-right" width="16" height="16"></iconify-icon></a>
+                            </div>
+                        </div>
+                        <?php
+                        $renderDates = function ($list, $emptyText) use ($e, $emptyState) {
+                            if (empty($list)) {
+                                echo $emptyState($emptyText);
+                                return;
+                            }
+                            foreach ($list as $d) {
+                                $dt = new DateTime($d['date']);
+                                $away = $d['days_away'];
+                                $awayTxt = $away === 0 ? 'Today' : ($away === 1 ? 'Tomorrow' : ($away === -1 ? 'Yesterday' : ($away > 1 ? 'In ' . $away . ' days' : abs($away) . ' days ago')));
+                        ?>
+                                <div class="sad-date-row <?= $d['highlight'] ? 'hl' : '' ?>">
+                                    <span class="sad-cal"><small><?= strtoupper($dt->format('M')) ?></small><b><?= $dt->format('d') ?></b></span>
+                                    <span class="min-w-0">
+                                        <span class="t"><?= $e($d['title']) ?></span>
+                                        <span class="s">
+                                            <?= $e(ucwords(str_replace('_', ' ', $d['type']))) ?> · <?= $e($d['time']) ?>
+                                            <?php if (!empty($d['location'])) { ?> · <?= $e($d['location']) ?><?php } ?>
+                                        </span>
+                                    </span>
+                                    <span class="sad-away <?= ($away >= 0 && $away <= 3) ? 'soon' : '' ?>"><?= $e($awayTxt) ?></span>
+                                </div>
+                        <?php
+                            }
+                        };
+                        ?>
+                        <div id="eventsTabContent"><?php $renderDates($eventsList, 'No upcoming events'); ?></div>
+                        <div id="deadlinesTabContent" class="d-none"><?php $renderDates($deadlinesList, 'No upcoming deadlines'); ?></div>
+                    </section>
+                </div>
+            </div>
+
+            <div class="row g-4 mb-4">
+                <!-- Admissions trend -->
+                <div class="col-12 col-xl-6">
+                    <section class="sad-panel h-100">
+                        <div class="sad-panel-head">
+                            <h2 class="sad-title">New admissions <span class="sad-scope">Last 6 months</span></h2>
+                            <span class="text-13 sub-text"><b class="text-dark-color"><?= number_format(array_sum($trend['admissions'])) ?></b> students</span>
+                        </div>
+                        <div class="sad-panel-body">
+                            <div class="sad-chart sm">
+                                <canvas id="sadAdmissionChart" role="img" aria-label="New admissions per month for the last six months"></canvas>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Students by programme -->
+                <div class="col-12 col-xl-6">
+                    <section class="sad-panel h-100">
+                        <div class="sad-panel-head">
+                            <h2 class="sad-title">Students by programme <span class="sad-scope">All time</span></h2>
+                            <div class="sad-legend">
+                                <span><i style="background:var(--sad-s1)"></i>Active</span>
+                                <span><i style="background:var(--sad-s2)"></i>Other</span>
+                            </div>
+                        </div>
+                        <div>
+                            <?php if (!empty($programmeMix)) {
+                                foreach ($programmeMix as $m) {
+                                    $total = (int)$m['students'];
+                                    $act = (int)$m['active'];
+                                    $wAct = round(($act / $mixMax) * 100, 1);
+                                    $wRest = round((($total - $act) / $mixMax) * 100, 1);
+                            ?>
+                                    <a class="sad-mix text-decoration-none" href="?<?= $e($baseQuery(['programme' => (int)$m['id']])) ?>" title="Filter dashboard by this programme">
+                                        <span class="n"><?= $e($m['name']) ?></span>
+                                        <span class="v"><?= number_format($total) ?></span>
+                                        <span class="sad-meter d-flex" style="gap:2px;background:var(--table-header-color)">
+                                            <i class="active" style="width:<?= $wAct ?>%"></i>
+                                            <?php if ($wRest > 0) { ?><i class="rest" style="width:<?= $wRest ?>%"></i><?php } ?>
+                                        </span>
+                                        <small><?= number_format($act) ?> active</small>
+                                    </a>
+                            <?php }
+                            } else {
+                                echo $emptyState('No programmes found');
+                            } ?>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- Lectures -->
+            <section class="sad-panel mb-5">
+                <div class="sad-panel-head">
+                    <h2 class="sad-title">Lectures <span class="sad-scope"><?= $e($rangeLabel) ?></span></h2>
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="text-13 sub-text">Showing <?= count($lecturesList) ?><?= count($lecturesList) >= 25 ? ' latest' : '' ?></span>
+                        <a class="sad-link" href="lecture-schedule">View all<iconify-icon icon="mdi:chevron-right" width="16" height="16"></iconify-icon></a>
+                    </div>
+                </div>
+                <div class="sad-table-wrap">
+                    <table class="table sad-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">#</th>
+                                <th scope="col">Lecturer’s Name</th>
+                                <th scope="col">Lecture Type</th>
+                                <th scope="col">Intake / Batch</th>
+                                <th scope="col">Subject</th>
+                                <th scope="col">Date &amp; Time</th>
+                                <th scope="col">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (!empty($lecturesList)) {
+                                foreach ($lecturesList as $idx => $l) {
+                            ?>
+                                    <tr>
+                                        <td class="sub-text"><?= $idx + 1 ?></td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <?php if (!empty($l['profile'])) { ?>
+                                                    <img class="sad-avatar" src="<?= $e($l['profile']) ?>" alt="">
+                                                <?php } else { ?>
+                                                    <span class="sad-avatar"><?= $e($l['initials']) ?></span>
+                                                <?php } ?>
+                                                <span class="text-dark-color fw-medium"><?= $e($l['lecturer']) ?></span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="sad-type">
+                                                <iconify-icon icon="<?= $l['type'] === 'Online' ? 'mdi:video-outline' : 'mdi:map-marker-outline' ?>" width="15" height="15"></iconify-icon><?= $e($l['type']) ?>
+                                            </span>
+                                        </td>
+                                        <td><?= $e($l['intake']) ?></td>
+                                        <td><?= $e($l['subject']) ?></td>
+                                        <td class="text-nowrap">
+                                            <?= $e($fmtDate($l['date'])) ?><br>
+                                            <span class="text-12 sub-text"><?= $time($l['start']) ?> – <?= $time($l['end']) ?></span>
+                                        </td>
+                                        <td>
+                                            <span class="sad-pill <?= $lectureStatusCls[$l['status']] ?? 'status-gray' ?>">
+                                                <?php if ($l['status'] === 'Ongoing') { ?><span class="sad-dot pulse"></span><?php } ?><?= $e($l['status']) ?>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                <?php }
+                            } else { ?>
+                                <tr>
+                                    <td colspan="7"><?= $emptyState('No lectures found', 'No lectures scheduled for this date range and filter.') ?></td>
+                                </tr>
+                            <?php } ?>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <script>
+            (function() {
+                var TODAY = '<?= $todayIso ?>';
+                var trend = <?= json_encode($trend, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+
+                window.sadToggleDate = function() {
                     var pop = document.getElementById('datePopover');
+                    var btn = document.getElementById('dateToggleBtn');
                     if (!pop) return;
                     pop.classList.toggle('show');
-                }
+                    btn.setAttribute('aria-expanded', pop.classList.contains('show'));
+                };
 
-                function showCalTab(tab) {
-                    var btnE = document.getElementById('tabBtnEvents');
-                    var btnD = document.getElementById('tabBtnDeadlines');
-                    var boxE = document.getElementById('eventsTabContent');
-                    var boxD = document.getElementById('deadlinesTabContent');
+                window.sadCalTab = function(tab) {
+                    var isEvents = tab === 'events';
+                    document.getElementById('tabBtnEvents').classList.toggle('active', isEvents);
+                    document.getElementById('tabBtnDeadlines').classList.toggle('active', !isEvents);
+                    document.getElementById('eventsTabContent').classList.toggle('d-none', !isEvents);
+                    document.getElementById('deadlinesTabContent').classList.toggle('d-none', isEvents);
+                };
 
-                    if (tab === 'events') {
-                        btnE.classList.add('active');
-                        btnD.classList.remove('active');
-                        boxE.style.display = 'flex';
-                        $("#eventsTabContent").hasClass("d-none") ? $("#eventsTabContent").removeClass("d-none") : "";
-                        $("#deadlinesTabContent").hasClass("d-none") ? "" : $("#deadlinesTabContent").addClass("d-none");
-
-                    } else {
-                        btnD.classList.add('active');
-                        btnE.classList.remove('active');
-                        $("#eventsTabContent").hasClass("d-none") ? "" : $("#eventsTabContent").addClass("d-none");
-                        $("#deadlinesTabContent").hasClass("d-none") ? $("#deadlinesTabContent").removeClass("d-none") : "";
-                    }
-
-                }
-
-                function applyPreset(key) {
+                window.sadPreset = function(key) {
                     var pad = function(n) {
                         return String(n).padStart(2, '0');
                     };
                     var iso = function(d) {
                         return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
                     };
-                    var today = new Date('<?= $todayIso ?>T12:00:00');
+                    var today = new Date(TODAY + 'T12:00:00');
                     var y = today.getFullYear(),
                         m = today.getMonth(),
                         d = today.getDate();
-                    var f = '',
-                        t = '<?= $todayIso ?>';
-
-                    if (key === 'today') {
-                        f = t;
-                    } else if (key === 'week') {
-                        f = iso(new Date(y, m, d - 6));
-                    } else if (key === 'month') {
-                        f = iso(new Date(y, m, 1));
-                    } else if (key === 'last') {
+                    var f = TODAY,
+                        t = TODAY;
+                    if (key === 'week') f = iso(new Date(y, m, d - 6));
+                    else if (key === 'month') f = iso(new Date(y, m, 1));
+                    else if (key === 'last') {
                         f = iso(new Date(y, m - 1, 1));
                         t = iso(new Date(y, m, 0));
-                    } else if (key === '3m') {
-                        f = iso(new Date(y, m - 2, 1));
-                    } else if (key === '6m') {
-                        f = iso(new Date(y, m - 5, 1));
-                    }
-
+                    } else if (key === '3m') f = iso(new Date(y, m - 2, 1));
+                    else if (key === '6m') f = iso(new Date(y, m - 5, 1));
                     document.getElementById('popFrom').value = f;
                     document.getElementById('popTo').value = t;
                     document.getElementById('filterForm').submit();
-                }
+                };
 
-                // Close popover when clicking outside
-                document.addEventListener('click', function(e) {
-                    var wrap = document.querySelector('.adx-filter-col-date');
+                document.addEventListener('click', function(ev) {
+                    var wrap = document.querySelector('.sad-f-date');
                     var pop = document.getElementById('datePopover');
-                    if (pop && pop.classList.contains('show') && wrap && !wrap.contains(e.target)) {
+                    if (pop && pop.classList.contains('show') && wrap && !wrap.contains(ev.target)) {
                         pop.classList.remove('show');
                     }
                 });
-
-                document.addEventListener('keydown', function(e) {
-                    if (e.key === 'Escape') {
+                document.addEventListener('keydown', function(ev) {
+                    if (ev.key === 'Escape') {
                         var pop = document.getElementById('datePopover');
                         if (pop) pop.classList.remove('show');
                     }
                 });
-            </script>
 
+                function lkr(v) {
+                    return 'LKR ' + Number(v).toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                }
+
+                function shortNum(v) {
+                    if (Math.abs(v) >= 1e6) return (v / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
+                    if (Math.abs(v) >= 1e3) return (v / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
+                    return v;
+                }
+
+                var css = getComputedStyle(document.querySelector('.sad'));
+                var C = function(name, fallback) {
+                    var v = css.getPropertyValue(name).trim();
+                    return v || fallback;
+                };
+
+                function baseOptions(yTick) {
+                    return {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                backgroundColor: C('--custom-white', '#ffffff'),
+                                titleColor: C('--dark-color', '#1D2026'),
+                                bodyColor: C('--main-text-color', '#4E5566'),
+                                borderColor: C('--line-color', '#E6E9F0'),
+                                borderWidth: 1,
+                                cornerRadius: 0,
+                                padding: 10,
+                                boxPadding: 4,
+                                usePointStyle: true
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: {
+                                    display: false
+                                },
+                                border: {
+                                    color: C('--line-color', '#E6E9F0')
+                                },
+                                ticks: {
+                                    color: C('--sub-text', '#8C94A3'),
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: C('--sad-grid', '#F0F2F6')
+                                },
+                                border: {
+                                    display: false
+                                },
+                                ticks: {
+                                    color: C('--sub-text', '#8C94A3'),
+                                    font: {
+                                        size: 12
+                                    },
+                                    maxTicksLimit: 5,
+                                    precision: 0,
+                                    callback: yTick
+                                }
+                            }
+                        }
+                    };
+                }
+
+                window.addEventListener('load', function() {
+                    if (typeof Chart === 'undefined') return;
+
+                    var fee = document.getElementById('sadFeeChart');
+                    if (fee) {
+                        var feeOpts = baseOptions(function(v) {
+                            return shortNum(v);
+                        });
+                        feeOpts.plugins.tooltip.callbacks = {
+                            label: function(ctx) {
+                                return ' ' + ctx.dataset.label + ': ' + lkr(ctx.parsed.y);
+                            },
+                            afterBody: function(items) {
+                                var exp = trend.expected[items[0].dataIndex];
+                                var rec = trend.received[items[0].dataIndex];
+                                return exp > 0 ? ' Collected vs due: ' + Math.round(rec / exp * 100) + '%' : '';
+                            }
+                        };
+                        new Chart(fee, {
+                            type: 'bar',
+                            data: {
+                                labels: trend.labels,
+                                datasets: [{
+                                    label: 'Expected (due)',
+                                    data: trend.expected,
+                                    backgroundColor: C('--sad-s2', '#9AAFFF'),
+                                    hoverBackgroundColor: C('--sad-s2', '#9AAFFF'),
+                                    borderRadius: {
+                                        topLeft: 4,
+                                        topRight: 4
+                                    },
+                                    borderSkipped: 'bottom',
+                                    maxBarThickness: 22,
+                                    categoryPercentage: 0.6,
+                                    barPercentage: 0.9
+                                }, {
+                                    label: 'Collected',
+                                    data: trend.received,
+                                    backgroundColor: C('--sad-s1', '#4f72ff'),
+                                    hoverBackgroundColor: C('--main-button-hover', '#3E5EE6'),
+                                    borderRadius: {
+                                        topLeft: 4,
+                                        topRight: 4
+                                    },
+                                    borderSkipped: 'bottom',
+                                    maxBarThickness: 22,
+                                    categoryPercentage: 0.6,
+                                    barPercentage: 0.9
+                                }]
+                            },
+                            options: feeOpts
+                        });
+                    }
+
+                    var adm = document.getElementById('sadAdmissionChart');
+                    if (adm) {
+                        var admOpts = baseOptions();
+                        admOpts.plugins.tooltip.callbacks = {
+                            label: function(ctx) {
+                                return ' ' + ctx.parsed.y + ' new students';
+                            }
+                        };
+                        new Chart(adm, {
+                            type: 'bar',
+                            data: {
+                                labels: trend.labels,
+                                datasets: [{
+                                    label: 'New admissions',
+                                    data: trend.admissions,
+                                    backgroundColor: C('--sad-s1', '#4f72ff'),
+                                    hoverBackgroundColor: C('--main-button-hover', '#3E5EE6'),
+                                    borderRadius: {
+                                        topLeft: 4,
+                                        topRight: 4
+                                    },
+                                    borderSkipped: 'bottom',
+                                    maxBarThickness: 36
+                                }]
+                            },
+                            options: admOpts
+                        });
+                    }
+                });
+            })();
+        </script>
 <?php
-        }
     }
 }

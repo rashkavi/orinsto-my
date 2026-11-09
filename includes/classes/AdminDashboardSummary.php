@@ -1,62 +1,94 @@
 <?php
 
+/**
+ * Super Admin dashboard data.
+ *
+ * Every figure on the Super Admin dashboard is produced here so the view only
+ * renders. Filters: start_date, end_date, programme_id and search.
+ * Period figures use the selected date range and are compared against the
+ * previous period of the same length. "Right now" figures (live classes,
+ * batches, action centre) describe the current state of the campus.
+ */
 class AdminDashboardSummary
 {
+    /** Attendance statuses that count as attended: Half Verify, Present, Watched. */
+    const ATTENDED_STATUSES = '1,2,4';
+
+    /** Students below this attendance rate are flagged in the action centre. */
+    const ATTENDANCE_THRESHOLD = 75;
+
     private static function fetchRow($sql)
     {
         $result = Database::search($sql);
         return ($result && $result->num_rows > 0) ? $result->fetch_assoc() : [];
     }
 
-    private static function getMonthKeys($monthsBack = 4)
+    private static function fetchAll($sql)
     {
-        $keys = [];
-        for ($i = $monthsBack; $i >= 0; $i--) {
-            $keys[] = date('Y-m', strtotime("-{$i} month"));
-        }
-        return $keys;
-    }
-
-    private static function getMonthlySeries($sql, $valueKey = 'total')
-    {
-        $map = array_fill_keys(self::getMonthKeys(4), 0);
-        $rs = Database::search($sql);
-        if ($rs) {
-            while ($row = $rs->fetch_assoc()) {
-                if (isset($map[$row['month_key']])) {
-                    $map[$row['month_key']] = (float)($row[$valueKey] ?? 0);
-                }
+        $rows = [];
+        $result = Database::search($sql);
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $rows[] = $row;
             }
         }
-        return array_values($map);
-    }
-
-    private static function buildChangeMeta($current, $previous, $period = 'vs previous period')
-    {
-        $current = (float)$current;
-        $previous = (float)$previous;
-
-        if ($previous == 0) {
-            return [
-                'change' => $current == 0 ? '0%' : 'New',
-                'change_type' => $current == 0 ? 'neutral' : 'positive',
-                'period' => $period,
-                'good_up' => true
-            ];
-        }
-
-        $percent = round((($current - $previous) / $previous) * 100, 1);
-        return [
-            'change' => ($percent > 0 ? '+' : '') . $percent . '%',
-            'change_type' => $percent > 0 ? 'positive' : ($percent < 0 ? 'negative' : 'neutral'),
-            'period' => $period,
-            'good_up' => $percent >= 0
-        ];
+        return $rows;
     }
 
     private static function escape($value)
     {
-        return addslashes((string)$value);
+        return Database::escape((string)$value);
+    }
+
+    /** Net payable amount of a course payment after its discount. */
+    private static function netAmountSql($alias = 'cp')
+    {
+        return "GREATEST({$alias}.amount - CASE
+                    WHEN {$alias}.discount_type_discount_type_id = 2 THEN {$alias}.discount
+                    WHEN {$alias}.discount_type_discount_type_id = 3 THEN {$alias}.amount * {$alias}.discount / 100
+                    ELSE 0 END, 0)";
+    }
+
+    /** Money actually received for a payment row (approved only). */
+    private static function paidAmountSql($alias = 'cph')
+    {
+        return "(COALESCE({$alias}.paid_amount, 0) + COALESCE({$alias}.panelty_amount, 0) - COALESCE({$alias}.discount_amount, 0))";
+    }
+
+    /** Percentage change, or null when there is nothing to compare against. */
+    private static function percentChange($current, $previous)
+    {
+        $current = (float)$current;
+        $previous = (float)$previous;
+        if ($previous == 0) {
+            return $current == 0 ? 0.0 : null;
+        }
+        return round((($current - $previous) / $previous) * 100, 1);
+    }
+
+    /** Keys (Y-m) and labels (M y) for the $count months ending with $endDate's month. */
+    private static function monthWindow($endDate, $count = 6)
+    {
+        $end = new DateTime(substr($endDate, 0, 7) . '-01');
+        $keys = [];
+        $labels = [];
+        for ($i = $count - 1; $i >= 0; $i--) {
+            $m = (clone $end)->modify("-{$i} month");
+            $keys[] = $m->format('Y-m');
+            $labels[] = $m->format('M y');
+        }
+        return [$keys, $labels];
+    }
+
+    private static function seriesFromRows($keys, $rows, $valueKey = 'total')
+    {
+        $map = array_fill_keys($keys, 0);
+        foreach ($rows as $row) {
+            if (array_key_exists($row['month_key'], $map)) {
+                $map[$row['month_key']] = round((float)$row[$valueKey], 2);
+            }
+        }
+        return array_values($map);
     }
 
     public static function getComprehensiveDashboardData($filters = [])
@@ -71,105 +103,98 @@ class AdminDashboardSummary
         $programmeFilter = !empty($filters['programme_id']) ? (int)$filters['programme_id'] : 0;
         $searchFilter = trim($filters['search'] ?? '');
 
-        // Validate dates before using them in SQL.
+        // Validate dates before they reach SQL.
         $datePattern = '/^\d{4}-\d{2}-\d{2}$/';
-        if (!preg_match($datePattern, $startDate) || !preg_match($datePattern, $endDate)) {
+        if (!preg_match($datePattern, $startDate) || !preg_match($datePattern, $endDate)
+            || !strtotime($startDate) || !strtotime($endDate)) {
             $startDate = $now->format('Y-m-01');
             $endDate = $todayDate;
         }
         if ($startDate > $endDate) {
-            $tmp = $startDate;
-            $startDate = $endDate;
-            $endDate = $tmp;
+            [$startDate, $endDate] = [$endDate, $startDate];
         }
+
+        // Previous period of the same length, used for "vs previous period".
+        $periodDays = (int)(new DateTime($startDate))->diff(new DateTime($endDate))->days + 1;
+        $prevEnd = (new DateTime($startDate))->modify('-1 day')->format('Y-m-d');
+        $prevStart = (new DateTime($prevEnd))->modify('-' . ($periodDays - 1) . ' day')->format('Y-m-d');
+
+        $rangeStart = "{$startDate} 00:00:00";
+        $rangeEnd = "{$endDate} 23:59:59";
+        $prevRangeStart = "{$prevStart} 00:00:00";
+        $prevRangeEnd = "{$prevEnd} 23:59:59";
 
         $search = self::escape($searchFilter);
         $programmeSql = $programmeFilter > 0 ? " AND i.programmes_programme_id = {$programmeFilter} " : "";
-        $searchStudentSql = "";
-        if ($search !== '') {
-            $searchStudentSql = " AND (
+
+        // Search on a student's name / contact, intake or programme.
+        $studentSearchSql = $search === '' ? '' : " AND (
                 CONCAT(COALESCE(ld.first_name,''),' ',COALESCE(ld.last_name,'')) LIKE '%{$search}%'
                 OR COALESCE(ld.email,'') LIKE '%{$search}%'
-                OR COALESCE(ld.mobile,'') LIKE '%{$search}%'
+                OR COALESCE(s.full_name,'') LIKE '%{$search}%'
+                OR COALESCE(s.mobile,'') LIKE '%{$search}%'
+                OR COALESCE(ld.whatsapp,'') LIKE '%{$search}%'
+                OR COALESCE(shi.student_id,'') LIKE '%{$search}%'
                 OR i.intake LIKE '%{$search}%'
                 OR p.programme LIKE '%{$search}%'
             ) ";
-        }
 
-        /*
-         * Student statistics:
-         * The date range is based on the admission date in students_has_intakes.
-         * Programme/search filters are applied through the student's intake.
-         */
-        $studentBase = "
-            FROM students s
-            INNER JOIN login_details ld
-                ON s.login_details_login_details_id = ld.login_details_id
-            INNER JOIN students_has_intakes shi
-                ON s.student_id = shi.students_student_id
-            INNER JOIN intakes i
-                ON shi.intakes_intake_id = i.intake_id
-            INNER JOIN programmes p
-                ON i.programmes_programme_id = p.programme_id
-            WHERE ld.status_status_id = 1
-              AND shi.addmission_date BETWEEN '{$startDate}' AND '{$endDate}'
-              {$programmeSql}
-              {$searchStudentSql}
-        ";
+        // Search on a lecture's intake, programme, subject, title or lecturer.
+        $lectureSearchSql = $search === '' ? '' : " AND (
+                i.intake LIKE '%{$search}%'
+                OR p.programme LIKE '%{$search}%'
+                OR subj.subject LIKE '%{$search}%'
+                OR COALESCE(tt.lecture_title,'') LIKE '%{$search}%'
+                OR CONCAT(u.user_fname,' ',u.user_lname) LIKE '%{$search}%'
+            ) ";
 
-        $generalStats = self::fetchRow("
-            SELECT
-                COUNT(DISTINCT s.student_id) AS student_count,
-                COUNT(DISTINCT CASE WHEN shi.status_status_id = 1 THEN s.student_id END) AS active_students,
-                COUNT(DISTINCT CASE WHEN shi.status_status_id = 2 THEN s.student_id END) AS inactive_students,
-                COUNT(DISTINCT CASE WHEN shi.status_status_id = 3 THEN s.student_id END) AS discontinued_students
-            {$studentBase}
-        ");
-
-        $totalStudents = (int)($generalStats['student_count'] ?? 0);
-        $activeStudents = (int)($generalStats['active_students'] ?? 0);
-        $inactiveStudents = (int)($generalStats['inactive_students'] ?? 0);
-        $discontinuedStudents = (int)($generalStats['discontinued_students'] ?? 0);
-
-        $activePct = $totalStudents > 0 ? round(($activeStudents / $totalStudents) * 100, 1) : 0;
-        $inactivePct = $totalStudents > 0 ? round(($inactiveStudents / $totalStudents) * 100, 1) : 0;
-        $discontinuePct = $totalStudents > 0 ? round(($discontinuedStudents / $totalStudents) * 100, 1) : 0;
-
-        /*
-         * Admission and payment figures use the selected date range.
-         */
-        $admissionStats = self::fetchRow("
-            SELECT COUNT(DISTINCT shi.students_student_id) AS total
+        $studentJoins = "
             FROM students_has_intakes shi
             INNER JOIN students s ON shi.students_student_id = s.student_id
             INNER JOIN login_details ld ON s.login_details_login_details_id = ld.login_details_id
             INNER JOIN intakes i ON shi.intakes_intake_id = i.intake_id
             INNER JOIN programmes p ON i.programmes_programme_id = p.programme_id
-            WHERE shi.addmission_date BETWEEN '{$startDate}' AND '{$endDate}'
-              {$programmeSql}
-              {$searchStudentSql}
+        ";
+
+        /* ───────────── Students (admitted in the selected period) ───────────── */
+        $studentStats = self::fetchRow("
+            SELECT
+                COUNT(DISTINCT shi.students_has_intakes_id) AS total,
+                COUNT(DISTINCT CASE WHEN shi.status_status_id = 1 THEN shi.students_has_intakes_id END) AS active,
+                COUNT(DISTINCT CASE WHEN shi.status_status_id = 2 THEN shi.students_has_intakes_id END) AS inactive,
+                COUNT(DISTINCT CASE WHEN shi.status_status_id = 3 THEN shi.students_has_intakes_id END) AS discontinued
+            {$studentJoins}
+            WHERE shi.addmission_date BETWEEN '{$rangeStart}' AND '{$rangeEnd}'
+              {$programmeSql} {$studentSearchSql}
+        ");
+        $prevAdmissions = self::fetchRow("
+            SELECT COUNT(DISTINCT shi.students_has_intakes_id) AS total
+            {$studentJoins}
+            WHERE shi.addmission_date BETWEEN '{$prevRangeStart}' AND '{$prevRangeEnd}'
+              {$programmeSql} {$studentSearchSql}
         ");
 
-        $paymentData = self::fetchRow("
+        $totalStudents = (int)($studentStats['total'] ?? 0);
+        $activeStudents = (int)($studentStats['active'] ?? 0);
+        $inactiveStudents = (int)($studentStats['inactive'] ?? 0);
+        $discontinuedStudents = (int)($studentStats['discontinued'] ?? 0);
+        $share = function ($n) use ($totalStudents) {
+            return $totalStudents > 0 ? round(($n / $totalStudents) * 100, 1) : 0;
+        };
+
+        // Whole-campus enrolment right now (not tied to the date range).
+        $campusStats = self::fetchRow("
             SELECT
-                COALESCE(SUM(CASE WHEN cpp_paid.paid_total IS NOT NULL THEN cpp_paid.paid_total ELSE 0 END), 0) AS received_income,
-                COALESCE(SUM(CASE WHEN cp.due_date BETWEEN '{$startDate}' AND '{$endDate}' THEN
-                    GREATEST(cp.amount - COALESCE(
-                        CASE
-                            WHEN cp.discount_type_discount_type_id = 2 THEN cp.discount
-                            WHEN cp.discount_type_discount_type_id = 3 THEN cp.amount * cp.discount / 100
-                            ELSE 0
-                        END, 0), 0)
-                    ELSE 0 END), 0) AS expected_income,
-                COALESCE(SUM(CASE WHEN cp.due_date BETWEEN '{$startDate}' AND '{$endDate}' THEN
-                    GREATEST(cp.amount - COALESCE(
-                        CASE
-                            WHEN cp.discount_type_discount_type_id = 2 THEN cp.discount
-                            WHEN cp.discount_type_discount_type_id = 3 THEN cp.amount * cp.discount / 100
-                            ELSE 0
-                        END, 0), 0)
-                    ELSE 0 END), 0)
-                - COALESCE(SUM(COALESCE(cpp_paid.paid_total, 0)), 0) AS balance_payment
+                COUNT(DISTINCT shi.students_has_intakes_id) AS total,
+                COUNT(DISTINCT CASE WHEN shi.status_status_id = 1 THEN shi.students_has_intakes_id END) AS active
+            {$studentJoins}
+            WHERE 1 = 1 {$programmeSql} {$studentSearchSql}
+        ");
+
+        /* ───────────── Finance ───────────── */
+        $net = self::netAmountSql('cp');
+        $paid = self::paidAmountSql('cph');
+        $paymentJoins = "
             FROM course_payments cp
             INNER JOIN payment_plan_has_students_has_intakes pshi
                 ON cp.payment_plan_has_students_has_intakes_id = pshi.payment_plan_has_students_has_intakes_id
@@ -179,324 +204,96 @@ class AdminDashboardSummary
             INNER JOIN login_details ld ON s.login_details_login_details_id = ld.login_details_id
             INNER JOIN intakes i ON shi.intakes_intake_id = i.intake_id
             INNER JOIN programmes p ON i.programmes_programme_id = p.programme_id
+        ";
+
+        $expectedSql = function ($from, $to) use ($net, $paymentJoins, $programmeSql, $studentSearchSql) {
+            return "SELECT COALESCE(SUM({$net}), 0) AS total
+                {$paymentJoins}
+                WHERE cp.due_date BETWEEN '{$from}' AND '{$to}'
+                  {$programmeSql} {$studentSearchSql}";
+        };
+        $receivedSql = function ($from, $to) use ($paid, $paymentJoins, $programmeSql, $studentSearchSql) {
+            return "SELECT COALESCE(SUM({$paid}), 0) AS total
+                {$paymentJoins}
+                INNER JOIN course_payment_has_payments cph
+                    ON cph.course_payments_course_payments_id = cp.course_payments_id
+                WHERE cph.payment_status_payment_status_id = 3
+                  AND cph.date_paid BETWEEN '{$from}' AND '{$to}'
+                  {$programmeSql} {$studentSearchSql}";
+        };
+
+        $expectedIncome = (float)(self::fetchRow($expectedSql($startDate, $endDate))['total'] ?? 0);
+        $receivedIncome = (float)(self::fetchRow($receivedSql($startDate, $endDate))['total'] ?? 0);
+        $prevExpected = (float)(self::fetchRow($expectedSql($prevStart, $prevEnd))['total'] ?? 0);
+        $prevReceived = (float)(self::fetchRow($receivedSql($prevStart, $prevEnd))['total'] ?? 0);
+
+        // Collected against instalments that fell due in the period.
+        $collectedOnDue = (float)(self::fetchRow("
+            SELECT COALESCE(SUM({$paid}), 0) AS total
+            {$paymentJoins}
+            INNER JOIN course_payment_has_payments cph
+                ON cph.course_payments_course_payments_id = cp.course_payments_id
+            WHERE cph.payment_status_payment_status_id = 3
+              AND cp.due_date BETWEEN '{$startDate}' AND '{$endDate}'
+              {$programmeSql} {$studentSearchSql}
+        ")['total'] ?? 0);
+        $balancePayment = max(0, $expectedIncome - $collectedOnDue);
+        $collectionRate = $expectedIncome > 0 ? min(100, round(($collectedOnDue / $expectedIncome) * 100, 1)) : 0;
+
+        // Total outstanding today across all instalments already due.
+        $outstanding = self::fetchRow("
+            SELECT COALESCE(SUM(GREATEST({$net} - COALESCE(pd.paid, 0), 0)), 0) AS total,
+                   COUNT(DISTINCT CASE WHEN {$net} - COALESCE(pd.paid, 0) > 0 THEN shi.students_has_intakes_id END) AS students
+            {$paymentJoins}
             LEFT JOIN (
-                SELECT
-                    course_payments_course_payments_id,
-                    SUM(CASE WHEN payment_status_payment_status_id = 3
-                        AND date_paid BETWEEN '{$startDate}' AND '{$endDate}'
-                        THEN COALESCE(paid_amount, 0) + COALESCE(panelty_amount, 0) - COALESCE(discount_amount, 0)
-                        ELSE 0 END) AS paid_total
-                FROM course_payment_has_payments
-                GROUP BY course_payments_course_payments_id
-            ) cpp_paid ON cp.course_payments_id = cpp_paid.course_payments_course_payments_id
-            WHERE (
-                cp.due_date BETWEEN '{$startDate}' AND '{$endDate}'
-                OR cpp_paid.paid_total IS NOT NULL
-            )
-            {$programmeSql}
-            " . ($search !== '' ? " AND (
-                CONCAT(COALESCE(ld.first_name,''),' ',COALESCE(ld.last_name,'')) LIKE '%{$search}%'
-                OR COALESCE(ld.email,'') LIKE '%{$search}%'
-                OR COALESCE(ld.mobile,'') LIKE '%{$search}%'
-                OR i.intake LIKE '%{$search}%'
-                OR p.programme LIKE '%{$search}%'
-            ) " : "") . "
+                SELECT cph.course_payments_course_payments_id AS cp_id, SUM({$paid}) AS paid
+                FROM course_payment_has_payments cph
+                WHERE cph.payment_status_payment_status_id = 3
+                GROUP BY cph.course_payments_course_payments_id
+            ) pd ON pd.cp_id = cp.course_payments_id
+            WHERE cp.due_date < '{$todayDate}'
+              AND shi.status_status_id = 1
+              {$programmeSql} {$studentSearchSql}
         ");
 
-        // Global system counts are intentionally not affected by academic/date filters.
-        $systemStats = self::fetchRow("
-            SELECT
-                (SELECT COUNT(*) FROM users WHERE status_status_id = 1 AND user_roles_user_role_id != 20) AS users_count,
-                (SELECT COUNT(*) FROM users WHERE status_status_id = 1 AND user_roles_user_role_id = 20) AS lecturers_count,
-                (SELECT COUNT(*) FROM faculties) AS faculties_count,
-                (SELECT COUNT(*) FROM programmes) AS programme_count
-        ");
-
-        $admissionsMeta = self::buildChangeMeta($admissionStats['total'] ?? 0, 0);
-        $expectedIncome = (float)($paymentData['expected_income'] ?? 0);
-        $receivedIncome = (float)($paymentData['received_income'] ?? 0);
-        $balancePayment = max(0, (float)($paymentData['balance_payment'] ?? 0));
-
-        $studentCards = [
-            [
-                'title' => 'Total Students',
-                'value' => $totalStudents,
-                'icon' => 'mdi:school',
-                'note' => 'Students admitted in selected period',
-                'spark' => [],
-                'href' => 'students'
-            ],
-            [
-                'title' => 'Active Students',
-                'value' => $activeStudents,
-                'icon' => 'mdi:account-check',
-                'share' => $activePct,
-                'share_tone' => 'g',
-                'note' => 'of filtered students',
-                'spark' => [],
-                'href' => 'students'
-            ],
-            [
-                'title' => 'Inactive Students',
-                'value' => $inactiveStudents,
-                'icon' => 'mdi:account-clock',
-                'share' => $inactivePct,
-                'share_tone' => 'o',
-                'note' => 'of filtered students',
-                'spark' => [],
-                'href' => 'students'
-            ],
-            [
-                'title' => 'Discontinue Students',
-                'value' => $discontinuedStudents,
-                'icon' => 'mdi:account-cancel',
-                'share' => $discontinuePct,
-                'share_tone' => 'r',
-                'note' => 'of filtered students',
-                'spark' => [],
-                'href' => 'students'
-            ]
-        ];
-
-        $financeCards = [
-            [
-                'title' => 'New Admissions',
-                'value' => (int)($admissionStats['total'] ?? 0),
-                'icon' => 'mdi:account-plus',
-                'change' => (float)str_replace(['+', '%', 'New'], '', $admissionsMeta['change']),
-                'good_up' => true,
-                'spark' => [],
-                'href' => 'students'
-            ],
-            [
-                'title' => 'Expected Income',
-                'value' => $expectedIncome,
-                'format' => 'money',
-                'icon' => 'mdi:trending-up',
-                'change' => 0,
-                'good_up' => true,
-                'spark' => [],
-                'href' => 'finance'
-            ],
-            [
-                'title' => 'Received Payment',
-                'value' => $receivedIncome,
-                'format' => 'money',
-                'icon' => 'mdi:wallet',
-                'change' => 0,
-                'good_up' => true,
-                'spark' => [],
-                'href' => 'finance'
-            ],
-            [
-                'title' => 'Balance Payment',
-                'value' => $balancePayment,
-                'format' => 'money',
-                'icon' => 'mdi:coins',
-                'change' => 0,
-                'good_up' => false,
-                'spark' => [],
-                'href' => 'finance'
-            ]
-        ];
-
-        $systemCards = [
-            ['title' => 'Users', 'value' => (int)($systemStats['users_count'] ?? 0), 'note' => 'Active', 'icon' => 'mdi:account-group', 'href' => 'users'],
-            ['title' => 'Faculties', 'value' => (int)($systemStats['faculties_count'] ?? 0), 'note' => 'Total', 'icon' => 'mdi:domain', 'href' => 'faculties'],
-            ['title' => 'Programmes', 'value' => (int)($systemStats['programme_count'] ?? 0), 'note' => 'Total', 'icon' => 'mdi:book-open-page-variant', 'href' => 'programmes'],
-            ['title' => 'Lecturers', 'value' => (int)($systemStats['lecturers_count'] ?? 0), 'note' => 'Active', 'icon' => 'mdi:teach', 'href' => 'lecturers']
-        ];
-
-        // Live classes: selected dates, programme and search are all applied.
-        $liveClasses = [];
-        $liveSql = "
-            SELECT tt.time_table_id, tt.start_time, tt.end_time, tt.lecture, tt.lecture_title,
-                   subj.subject, i.intake, u.user_fname, u.user_lname, u.profile_img, t.title,tt.date
-            FROM time_table tt
+        /* ───────────── Attendance ───────────── */
+        $attendanceJoins = "
+            FROM attendance a
+            INNER JOIN time_table tt ON a.time_table_time_table_id = tt.time_table_id
             INNER JOIN subjects subj ON tt.subjects_subject_id = subj.subject_id
             INNER JOIN levels lv ON subj.levels_level_id = lv.level_id
             INNER JOIN intakes i ON lv.intakes_intake_id = i.intake_id
             INNER JOIN programmes p ON i.programmes_programme_id = p.programme_id
-            INNER JOIN lecturers lec ON tt.lecturers_lecturers_id = lec.lecturers_id
-            INNER JOIN users u ON lec.users_user_id = u.user_id
-            INNER JOIN title t ON u.title_title_id = t.title_id
-            WHERE tt.date BETWEEN '{$startDate}' AND '{$endDate}'
-              AND tt.lecture_type_lecture_type_id = 2
-              AND tt.time_table_status_time_table_status_id = 1
-              {$programmeSql}
-              " . ($search !== '' ? " AND (
-                    i.intake LIKE '%{$search}%'
-                    OR p.programme LIKE '%{$search}%'
-                    OR subj.subject LIKE '%{$search}%'
-                    OR tt.lecture_title LIKE '%{$search}%'
-                    OR CONCAT(u.user_fname,' ',u.user_lname) LIKE '%{$search}%'
-              ) " : "") . "
-            ORDER BY tt.date ASC, tt.start_time ASC
         ";
-        $liveRes = Database::search($liveSql);
-        if ($liveRes) {
-            while ($r = $liveRes->fetch_assoc()) {
-                $status = 'Upcoming';
-                if ($r['start_time'] <= $nowTime && $r['end_time'] >= $nowTime && $r['date'] === $todayDate) {
-                    $status = 'Ongoing';
-                } elseif ($r['date'] < $todayDate || ($r['date'] === $todayDate && $nowTime > $r['end_time'])) {
-                    $status = 'Ended';
-                }
-                $liveClasses[] = [
-                    'id' => $r['time_table_id'],
-                    'subject' => !empty($r['lecture_title']) ? $r['lecture_title'] : $r['subject'],
-                    'intake' => $r['intake'],
-                    'lecturer' => $r['title'] . '. ' . $r['user_fname'] . ' ' . $r['user_lname'],
-                    'initials' => strtoupper(substr($r['user_fname'], 0, 1) . substr($r['user_lname'], 0, 1)),
-                    'start' => $r['start_time'],
-                    'end' => $r['end_time'],
-                    'status' => $status,
-                    'link' => $r['lecture']
-                ];
-            }
-        }
+        $attended = self::ATTENDED_STATUSES;
+        $attendanceRateSql = function ($from, $to) use ($attendanceJoins, $attended, $programmeSql) {
+            return "SELECT COUNT(*) AS marked,
+                       SUM(CASE WHEN a.attendance_status_attendance_status_id IN ({$attended}) THEN 1 ELSE 0 END) AS attended
+                {$attendanceJoins}
+                WHERE tt.date BETWEEN '{$from}' AND '{$to}' {$programmeSql}";
+        };
+        $att = self::fetchRow($attendanceRateSql($startDate, $endDate));
+        $prevAtt = self::fetchRow($attendanceRateSql($prevStart, $prevEnd));
+        $attendanceRate = (int)($att['marked'] ?? 0) > 0 ? round(($att['attended'] / $att['marked']) * 100, 1) : null;
+        $prevAttendanceRate = (int)($prevAtt['marked'] ?? 0) > 0 ? round(($prevAtt['attended'] / $prevAtt['marked']) * 100, 1) : null;
 
-        // Management counts are filtered where their database relationships permit it.
-        $inquiries = self::fetchRow(
-            "SELECT COUNT(*) AS total FROM students_has_help_desk
-             WHERE help_desk_status_help_desk_status_id = 1"
-        );
-
-        $apps = self::fetchRow("
-            SELECT COUNT(DISTINCT cp.course_payments_id) AS total
-            FROM course_payments cp
-            INNER JOIN payment_plan_has_students_has_intakes pshi
-                ON cp.payment_plan_has_students_has_intakes_id = pshi.payment_plan_has_students_has_intakes_id
-            INNER JOIN students_has_intakes shi
-                ON pshi.students_has_intakes_students_has_intakes_id = shi.students_has_intakes_id
-            INNER JOIN intakes i ON shi.intakes_intake_id = i.intake_id
-            WHERE cp.payment_status_payment_status_id = 2
-              AND shi.addmission_date BETWEEN '{$startDate}' AND '{$endDate}'
-              {$programmeSql}
+        $threshold = self::ATTENDANCE_THRESHOLD;
+        $lowAttendance = self::fetchRow("
+            SELECT COUNT(*) AS total FROM (
+                SELECT a.students_student_id
+                {$attendanceJoins}
+                INNER JOIN students_has_intakes shi
+                    ON shi.students_student_id = a.students_student_id
+                    AND shi.intakes_intake_id = i.intake_id
+                    AND shi.status_status_id = 1
+                WHERE tt.date <= '{$todayDate}' {$programmeSql}
+                GROUP BY a.students_student_id, i.intake_id
+                HAVING SUM(CASE WHEN a.attendance_status_attendance_status_id IN ({$attended}) THEN 1 ELSE 0 END) * 100 < COUNT(*) * {$threshold}
+            ) x
         ");
 
-        $overdue = self::fetchRow("
-            SELECT COUNT(DISTINCT cp.course_payments_id) AS total
-            FROM course_payments cp
-            INNER JOIN payment_plan_has_students_has_intakes pshi
-                ON cp.payment_plan_has_students_has_intakes_id = pshi.payment_plan_has_students_has_intakes_id
-            INNER JOIN students_has_intakes shi
-                ON pshi.students_has_intakes_students_has_intakes_id = shi.students_has_intakes_id
-            INNER JOIN intakes i ON shi.intakes_intake_id = i.intake_id
-            WHERE cp.payment_status_payment_status_id = 1
-              AND cp.due_date < CURDATE()
-              AND shi.addmission_date BETWEEN '{$startDate}' AND '{$endDate}'
-              {$programmeSql}
-        ");
-
-        $certs = self::fetchRow("
-            SELECT COUNT(DISTINCT shi.students_student_id) AS total
-            FROM students_has_intakes shi
-            INNER JOIN intakes i ON shi.intakes_intake_id = i.intake_id
-            WHERE shi.status_status_id = 4
-              AND shi.addmission_date BETWEEN '{$startDate}' AND '{$endDate}'
-              {$programmeSql}
-        ");
-
-        $actions = [
-            ['label' => 'New inquiries to call back', 'count' => (int)($inquiries['total'] ?? 0), 'tone' => 'warn', 'icon' => 'mdi:phone-in-talk-outline', 'href' => 'inquiries'],
-            ['label' => 'Applications to review', 'count' => (int)($apps['total'] ?? 0), 'tone' => 'info', 'icon' => 'mdi:file-document-edit-outline', 'href' => 'enrollments'],
-            ['label' => 'Overdue fee reminders', 'count' => (int)($overdue['total'] ?? 0), 'tone' => 'bad', 'icon' => 'mdi:alert-circle-outline', 'href' => 'awaiting-payments'],
-            ['label' => 'Students below 75% attendance', 'count' => 0, 'tone' => 'warn', 'icon' => 'mdi:account-alert-outline', 'href' => 'attendance'],
-            ['label' => 'Certificates ready to issue', 'count' => (int)($certs['total'] ?? 0), 'tone' => 'info', 'icon' => 'mdi:certificate-outline', 'href' => '']
-        ];
-
-        // Batches: filter by programme, admission date and search term.
-        $batches = [];
-        $batchesSql = "
-            SELECT i.intake_id, i.intake, p.programme,
-                   COUNT(DISTINCT shi.students_student_id) AS total_students,
-                   COUNT(DISTINCT CASE WHEN shi.status_status_id = 1 THEN shi.students_student_id END) AS active_students
-            FROM intakes i
-            INNER JOIN programmes p ON i.programmes_programme_id = p.programme_id
-            LEFT JOIN students_has_intakes shi
-                ON i.intake_id = shi.intakes_intake_id
-                AND shi.addmission_date BETWEEN '{$startDate}' AND '{$endDate}'
-            LEFT JOIN students s ON shi.students_student_id = s.student_id
-            LEFT JOIN login_details ld ON s.login_details_login_details_id = ld.login_details_id
-            WHERE 1=1 {$programmeSql}
-              " . ($search !== '' ? " AND (i.intake LIKE '%{$search}%' OR p.programme LIKE '%{$search}%'
-                    OR CONCAT(COALESCE(ld.first_name,''),' ',COALESCE(ld.last_name,'')) LIKE '%{$search}%'
-                    OR COALESCE(ld.email,'') LIKE '%{$search}%') " : "") . "
-            GROUP BY i.intake_id, i.intake, p.programme
-            HAVING COUNT(DISTINCT shi.students_student_id) > 0
-            ORDER BY i.intake_id DESC
-            LIMIT 5
-        ";
-        $bRes = Database::search($batchesSql);
-        if ($bRes) {
-            $progressValues = [85, 60, 40, 20, 10];
-            $idx = 0;
-            while ($b = $bRes->fetch_assoc()) {
-                $progress = $progressValues[$idx % count($progressValues)];
-                $state = $progress > 80 ? 'Ending soon' : ($progress < 25 ? 'New intake' : 'Running');
-                $batches[] = [
-                    'intake' => $b['intake'],
-                    'programme' => $b['programme'],
-                    'progress' => $progress,
-                    'active' => (int)$b['active_students'],
-                    'students' => (int)$b['total_students'],
-                    'state' => $state
-                ];
-                $idx++;
-            }
-        }
-
-        // Events and deadlines are calendar items, not student/lecture statistics.
-        $events = [];
-        $deadlines = [];
-        $checkTable = Database::search("SHOW TABLES LIKE 'academic_events'");
-        if ($checkTable && $checkTable->num_rows > 0) {
-            $resE = Database::search("
-                SELECT * FROM academic_events
-                WHERE status = 1 AND event_type IN ('event','workshop','site_visit')
-                  AND start_date BETWEEN '{$startDate}' AND '{$endDate}'
-                ORDER BY start_date ASC, start_time ASC LIMIT 5
-            ");
-            if ($resE) {
-                while ($r = $resE->fetch_assoc()) {
-                    $timeStr = 'All Day';
-                    if (!empty($r['start_time']) && !empty($r['end_time'])) {
-                        $timeStr = date('h:i A', strtotime($r['start_time'])) . ' – ' . date('h:i A', strtotime($r['end_time']));
-                    }
-                    $events[] = [
-                        'date' => $r['start_date'],
-                        'title' => $r['title'],
-                        'time' => $timeStr,
-                        'highlight' => (bool)$r['is_highlighted']
-                    ];
-                }
-            }
-
-            $resD = Database::search("
-                SELECT * FROM academic_events
-                WHERE status = 1 AND event_type IN ('deadline','orientation')
-                  AND start_date BETWEEN '{$startDate}' AND '{$endDate}'
-                ORDER BY start_date ASC, start_time ASC LIMIT 5
-            ");
-            if ($resD) {
-                while ($r = $resD->fetch_assoc()) {
-                    $deadlines[] = [
-                        'date' => $r['start_date'],
-                        'title' => $r['title'],
-                        'highlight' => (bool)$r['is_highlighted']
-                    ];
-                }
-            }
-        }
-
-        // Lecture schedule: selected date range, programme and search.
-        $lectures = [];
-        $lecSql = "
-            SELECT tt.time_table_id, tt.date, tt.start_time, tt.end_time, tt.lecture_title,
-                   lt.lecture_type, lt.lecture_type_id, i.intake, subj.subject,
-                   p.programme, p.programme_id, u.user_id, u.user_fname, u.user_lname,
-                   u.profile_img, t.title
+        /* ───────────── Lectures in the period ───────────── */
+        $lectureJoins = "
             FROM time_table tt
             INNER JOIN subjects subj ON tt.subjects_subject_id = subj.subject_id
             INNER JOIN levels lv ON subj.levels_level_id = lv.level_id
@@ -505,63 +302,395 @@ class AdminDashboardSummary
             INNER JOIN lecture_type lt ON tt.lecture_type_lecture_type_id = lt.lecture_type_id
             INNER JOIN lecturers lec ON tt.lecturers_lecturers_id = lec.lecturers_id
             INNER JOIN users u ON lec.users_user_id = u.user_id
-            INNER JOIN title t ON u.title_title_id = t.title_id
+            LEFT JOIN title t ON u.title_title_id = t.title_id
+        ";
+        $lectureStats = self::fetchRow("
+            SELECT COUNT(*) AS total,
+                   SUM(CASE WHEN tt.lecture_type_lecture_type_id = 1 THEN 1 ELSE 0 END) AS physical,
+                   SUM(CASE WHEN tt.lecture_type_lecture_type_id = 2 THEN 1 ELSE 0 END) AS online,
+                   SUM(CASE WHEN tt.time_table_status_time_table_status_id IN (2, 3) THEN 1 ELSE 0 END) AS cancelled
+            {$lectureJoins}
+            WHERE tt.lecture_type_lecture_type_id != 3
+              AND tt.date BETWEEN '{$startDate}' AND '{$endDate}'
+              {$programmeSql} {$lectureSearchSql}
+        ");
+
+        /* ───────────── System (whole campus, not filtered) ───────────── */
+        $systemStats = self::fetchRow("
+            SELECT
+                (SELECT COUNT(*) FROM users WHERE status_status_id = 1 AND user_roles_user_role_id != 20) AS users_count,
+                (SELECT COUNT(*) FROM users WHERE status_status_id = 1 AND user_roles_user_role_id = 20) AS lecturers_count,
+                (SELECT COUNT(*) FROM faculties) AS faculties_count,
+                (SELECT COUNT(*) FROM programmes) AS programme_count,
+                (SELECT COUNT(*) FROM intakes) AS intake_count
+        ");
+
+        /* ───────────── Monthly trend (6 months ending with the selected end month) ───────────── */
+        [$monthKeys, $monthLabels] = self::monthWindow($endDate, 6);
+        $trendFrom = $monthKeys[0] . '-01';
+        $trendTo = (new DateTime(end($monthKeys) . '-01'))->modify('last day of this month')->format('Y-m-d');
+
+        $admissionRows = self::fetchAll("
+            SELECT DATE_FORMAT(shi.addmission_date, '%Y-%m') AS month_key,
+                   COUNT(DISTINCT shi.students_has_intakes_id) AS total
+            {$studentJoins}
+            WHERE shi.addmission_date BETWEEN '{$trendFrom} 00:00:00' AND '{$trendTo} 23:59:59'
+              {$programmeSql} {$studentSearchSql}
+            GROUP BY month_key
+        ");
+        $expectedRows = self::fetchAll("
+            SELECT DATE_FORMAT(cp.due_date, '%Y-%m') AS month_key, SUM({$net}) AS total
+            {$paymentJoins}
+            WHERE cp.due_date BETWEEN '{$trendFrom}' AND '{$trendTo}'
+              {$programmeSql} {$studentSearchSql}
+            GROUP BY month_key
+        ");
+        $receivedRows = self::fetchAll("
+            SELECT DATE_FORMAT(cph.date_paid, '%Y-%m') AS month_key, SUM({$paid}) AS total
+            {$paymentJoins}
+            INNER JOIN course_payment_has_payments cph
+                ON cph.course_payments_course_payments_id = cp.course_payments_id
+            WHERE cph.payment_status_payment_status_id = 3
+              AND cph.date_paid BETWEEN '{$trendFrom}' AND '{$trendTo}'
+              {$programmeSql} {$studentSearchSql}
+            GROUP BY month_key
+        ");
+
+        $trend = [
+            'labels' => $monthLabels,
+            'admissions' => array_map('intval', self::seriesFromRows($monthKeys, $admissionRows)),
+            'expected' => self::seriesFromRows($monthKeys, $expectedRows),
+            'received' => self::seriesFromRows($monthKeys, $receivedRows),
+        ];
+
+        /* ───────────── KPI cards ───────────── */
+        $admissionsChange = self::percentChange($totalStudents, $prevAdmissions['total'] ?? 0);
+
+        $studentCards = [
+            [
+                'title' => 'Total Students',
+                'value' => $totalStudents,
+                'icon' => 'mdi:school-outline',
+                'note' => 'admitted in period',
+                'href' => 'students',
+            ],
+            [
+                'title' => 'Active Students',
+                'value' => $activeStudents,
+                'icon' => 'mdi:account-check-outline',
+                'share' => $share($activeStudents),
+                'tone' => 'good',
+                'href' => 'students',
+            ],
+            [
+                'title' => 'Inactive Students',
+                'value' => $inactiveStudents,
+                'icon' => 'mdi:account-clock-outline',
+                'share' => $share($inactiveStudents),
+                'tone' => 'warn',
+                'href' => 'students',
+            ],
+            [
+                'title' => 'Discontinue Students',
+                'value' => $discontinuedStudents,
+                'icon' => 'mdi:account-cancel-outline',
+                'share' => $share($discontinuedStudents),
+                'tone' => 'bad',
+                'href' => 'students',
+            ],
+        ];
+
+        $financeCards = [
+            [
+                'title' => 'New Admissions',
+                'value' => $totalStudents,
+                'icon' => 'mdi:account-plus-outline',
+                'change' => $admissionsChange,
+                'good_up' => true,
+                'spark' => $trend['admissions'],
+                'href' => 'students',
+            ],
+            [
+                'title' => 'Expected Income',
+                'value' => $expectedIncome,
+                'format' => 'money',
+                'icon' => 'mdi:cash-clock',
+                'change' => self::percentChange($expectedIncome, $prevExpected),
+                'good_up' => true,
+                'spark' => $trend['expected'],
+                'href' => 'students-payments',
+            ],
+            [
+                'title' => 'Received Payment',
+                'value' => $receivedIncome,
+                'format' => 'money',
+                'icon' => 'mdi:wallet-outline',
+                'change' => self::percentChange($receivedIncome, $prevReceived),
+                'good_up' => true,
+                'spark' => $trend['received'],
+                'href' => 'payments',
+            ],
+            [
+                'title' => 'Balance Payment',
+                'value' => $balancePayment,
+                'format' => 'money',
+                'icon' => 'mdi:cash-remove',
+                'rate' => $collectionRate,
+                'href' => 'awaiting-payments',
+            ],
+        ];
+
+        $systemCards = [
+            ['title' => 'Users', 'value' => (int)($systemStats['users_count'] ?? 0), 'note' => 'Active', 'icon' => 'mdi:account-group-outline', 'href' => 'users'],
+            ['title' => 'Faculties', 'value' => (int)($systemStats['faculties_count'] ?? 0), 'note' => 'Total', 'icon' => 'mdi:domain', 'href' => 'faculties'],
+            ['title' => 'Programmes', 'value' => (int)($systemStats['programme_count'] ?? 0), 'note' => 'Total', 'icon' => 'mdi:book-open-page-variant-outline', 'href' => 'programes'],
+            ['title' => 'Lecturers', 'value' => (int)($systemStats['lecturers_count'] ?? 0), 'note' => 'Active', 'icon' => 'mdi:human-male-board', 'href' => 'lecturers'],
+        ];
+
+        $insights = [
+            'campus_total' => (int)($campusStats['total'] ?? 0),
+            'campus_active' => (int)($campusStats['active'] ?? 0),
+            'collection_rate' => $collectionRate,
+            'collected_on_due' => $collectedOnDue,
+            'outstanding' => (float)($outstanding['total'] ?? 0),
+            'outstanding_students' => (int)($outstanding['students'] ?? 0),
+            'attendance_rate' => $attendanceRate,
+            'attendance_change' => ($attendanceRate !== null && $prevAttendanceRate !== null)
+                ? round($attendanceRate - $prevAttendanceRate, 1) : null,
+            'attendance_marked' => (int)($att['marked'] ?? 0),
+            'lectures_total' => (int)($lectureStats['total'] ?? 0),
+            'lectures_physical' => (int)($lectureStats['physical'] ?? 0),
+            'lectures_online' => (int)($lectureStats['online'] ?? 0),
+            'lectures_cancelled' => (int)($lectureStats['cancelled'] ?? 0),
+            'intakes' => (int)($systemStats['intake_count'] ?? 0),
+        ];
+
+        /* ───────────── Live classes: today only ───────────── */
+        $liveClasses = [];
+        $liveRows = self::fetchAll("
+            SELECT tt.time_table_id, tt.date, tt.start_time, tt.end_time, tt.lecture, tt.lecture_title,
+                   tt.lecture_type_lecture_type_id AS type_id, tt.time_table_status_time_table_status_id AS status_id,
+                   subj.subject, i.intake, p.programme, u.user_fname, u.user_lname, t.title
+            {$lectureJoins}
+            WHERE tt.date = '{$todayDate}'
+              AND tt.lecture_type_lecture_type_id IN (1, 2)
+              AND tt.time_table_status_time_table_status_id IN (1, 5)
+              {$programmeSql} {$lectureSearchSql}
+            ORDER BY tt.start_time ASC
+        ");
+        foreach ($liveRows as $r) {
+            $status = 'Upcoming';
+            if ((int)$r['status_id'] === 5 || $nowTime > $r['end_time']) {
+                $status = 'Ended';
+            } elseif ($nowTime >= $r['start_time']) {
+                $status = 'Live';
+            }
+            $liveClasses[] = [
+                'id' => (int)$r['time_table_id'],
+                'title' => !empty($r['lecture_title']) ? $r['lecture_title'] : $r['subject'],
+                'subject' => $r['subject'],
+                'intake' => $r['intake'],
+                'programme' => $r['programme'],
+                'lecturer' => trim(($r['title'] ? $r['title'] . '. ' : '') . $r['user_fname'] . ' ' . $r['user_lname']),
+                'start' => $r['start_time'],
+                'end' => $r['end_time'],
+                'type' => (int)$r['type_id'] === 2 ? 'Online' : 'Physical',
+                'status' => $status,
+                'link' => ((int)$r['type_id'] === 2 && filter_var($r['lecture'], FILTER_VALIDATE_URL)) ? $r['lecture'] : '',
+            ];
+        }
+
+        /* ───────────── Management action centre (current state) ───────────── */
+        $inquiries = self::fetchRow("
+            SELECT COUNT(*) AS total FROM students_has_help_desk
+            WHERE help_desk_status_help_desk_status_id IN (1, 3)
+        ");
+        $approvals = self::fetchRow("
+            SELECT COUNT(DISTINCT cph.course_payment_has_payment_id) AS total
+            {$paymentJoins}
+            INNER JOIN course_payment_has_payments cph
+                ON cph.course_payments_course_payments_id = cp.course_payments_id
+            WHERE cph.payment_status_payment_status_id = 2 {$programmeSql}
+        ");
+        $overdue = self::fetchRow("
+            SELECT COUNT(DISTINCT cp.course_payments_id) AS total
+            {$paymentJoins}
+            WHERE cp.payment_status_payment_status_id IN (1, 2)
+              AND cp.due_date < '{$todayDate}'
+              AND shi.status_status_id = 1
+              {$programmeSql}
+        ");
+        $certificates = self::fetchRow("
+            SELECT COUNT(DISTINCT shi.students_has_intakes_id) AS total
+            {$studentJoins}
+            WHERE shi.status_status_id = 1
+              AND i.end_date IS NOT NULL AND i.end_date < '{$todayDate}'
+              {$programmeSql}
+        ");
+
+        $actions = [
+            ['label' => 'New inquiries to call back', 'hint' => 'Open & escalated help-desk tickets', 'count' => (int)($inquiries['total'] ?? 0), 'tone' => 'warn', 'icon' => 'mdi:phone-in-talk-outline', 'href' => 'help-desk'],
+            ['label' => 'Applications to review', 'hint' => 'Payment slips awaiting approval', 'count' => (int)($approvals['total'] ?? 0), 'tone' => 'info', 'icon' => 'mdi:file-document-edit-outline', 'href' => 'awaiting-payments'],
+            ['label' => 'Overdue fee reminders', 'hint' => 'Instalments past their due date', 'count' => (int)($overdue['total'] ?? 0), 'tone' => 'bad', 'icon' => 'mdi:alert-circle-outline', 'href' => 'awaiting-payments'],
+            ['label' => 'Students below ' . $threshold . '% attendance', 'hint' => 'Active students, all lectures to date', 'count' => (int)($lowAttendance['total'] ?? 0), 'tone' => 'warn', 'icon' => 'mdi:account-alert-outline', 'href' => 'students-attendance-breakdown'],
+            ['label' => 'Certificates ready to issue', 'hint' => 'Active students of completed intakes', 'count' => (int)($certificates['total'] ?? 0), 'tone' => 'info', 'icon' => 'mdi:certificate-outline', 'href' => 'intakes'],
+        ];
+
+        /* ───────────── Batches (intakes) – current progress ───────────── */
+        $batches = [];
+        $batchRows = self::fetchAll("
+            SELECT i.intake_id, i.intake, i.start_date, i.end_date, p.programme,
+                   COUNT(DISTINCT shi.students_has_intakes_id) AS students,
+                   COUNT(DISTINCT CASE WHEN shi.status_status_id = 1 THEN shi.students_has_intakes_id END) AS active
+            FROM intakes i
+            INNER JOIN programmes p ON i.programmes_programme_id = p.programme_id
+            LEFT JOIN students_has_intakes shi ON shi.intakes_intake_id = i.intake_id
+            WHERE 1 = 1 {$programmeSql}
+              " . ($search !== '' ? " AND (i.intake LIKE '%{$search}%' OR p.programme LIKE '%{$search}%') " : '') . "
+            GROUP BY i.intake_id, i.intake, i.start_date, i.end_date, p.programme
+            ORDER BY (i.end_date IS NOT NULL AND i.end_date < '{$todayDate}') ASC, i.start_date DESC, i.intake_id DESC
+            LIMIT 6
+        ");
+        $today = new DateTime($todayDate);
+        foreach ($batchRows as $b) {
+            $progress = null;
+            $state = 'Running';
+            $daysLeft = null;
+            if (!empty($b['start_date']) && !empty($b['end_date'])) {
+                $start = new DateTime($b['start_date']);
+                $end = new DateTime($b['end_date']);
+                $span = max(1, (int)$start->diff($end)->days);
+                if ($today < $start) {
+                    $progress = 0;
+                    $state = 'New intake';
+                } elseif ($today > $end) {
+                    $progress = 100;
+                    $state = 'Completed';
+                } else {
+                    $progress = (int)round(($start->diff($today)->days / $span) * 100);
+                    $daysLeft = (int)$today->diff($end)->days;
+                    $state = $progress >= 85 ? 'Ending soon' : ($progress < 10 ? 'New intake' : 'Running');
+                }
+            }
+            $batches[] = [
+                'id' => (int)$b['intake_id'],
+                'intake' => $b['intake'],
+                'programme' => $b['programme'],
+                'start' => $b['start_date'],
+                'end' => $b['end_date'],
+                'progress' => $progress,
+                'days_left' => $daysLeft,
+                'students' => (int)$b['students'],
+                'active' => (int)$b['active'],
+                'state' => $state,
+            ];
+        }
+
+        /* ───────────── Students by programme (current) ───────────── */
+        $programmeMix = self::fetchAll("
+            SELECT p.programme_id AS id, p.programme AS name,
+                   COUNT(DISTINCT shi.students_has_intakes_id) AS students,
+                   COUNT(DISTINCT CASE WHEN shi.status_status_id = 1 THEN shi.students_has_intakes_id END) AS active
+            FROM programmes p
+            LEFT JOIN intakes i ON i.programmes_programme_id = p.programme_id
+            LEFT JOIN students_has_intakes shi ON shi.intakes_intake_id = i.intake_id
+            WHERE 1 = 1 " . ($programmeFilter > 0 ? " AND p.programme_id = {$programmeFilter} " : '') . "
+            GROUP BY p.programme_id, p.programme
+            ORDER BY students DESC, p.programme ASC
+        ");
+
+        /* ───────────── Events & deadlines ───────────── */
+        $events = [];
+        $deadlines = [];
+        $checkTable = Database::search("SHOW TABLES LIKE 'academic_events'");
+        if ($checkTable && $checkTable->num_rows > 0) {
+            // Show what is coming up from the start of the range, so the widget is never stale.
+            $eventsFrom = max($startDate, $todayDate) > $endDate ? $startDate : min($startDate, $todayDate);
+            $eventProgSql = $programmeFilter > 0
+                ? " AND (target_programme_id IS NULL OR target_programme_id = {$programmeFilter}) " : '';
+            $eventRows = self::fetchAll("
+                SELECT * FROM academic_events
+                WHERE status = 1
+                  AND COALESCE(end_date, start_date) >= '{$eventsFrom}'
+                  {$eventProgSql}
+                ORDER BY start_date ASC, start_time ASC
+                LIMIT 30
+            ");
+            foreach ($eventRows as $r) {
+                $item = [
+                    'date' => $r['start_date'],
+                    'title' => $r['title'],
+                    'type' => $r['event_type'],
+                    'location' => $r['location'] ?? '',
+                    'time' => (!empty($r['start_time']) && !empty($r['end_time']))
+                        ? date('h:i A', strtotime($r['start_time'])) . ' – ' . date('h:i A', strtotime($r['end_time']))
+                        : 'All day',
+                    'highlight' => (bool)$r['is_highlighted'],
+                    'days_away' => (int)$today->diff(new DateTime($r['start_date']))->format('%r%a'),
+                ];
+                if (in_array($r['event_type'], ['deadline', 'exam'], true)) {
+                    if (count($deadlines) < 6) $deadlines[] = $item;
+                } elseif (count($events) < 6) {
+                    $events[] = $item;
+                }
+            }
+        }
+
+        /* ───────────── Lecture schedule (selected range) ───────────── */
+        $lectures = [];
+        $lectureRows = self::fetchAll("
+            SELECT tt.time_table_id, tt.date, tt.start_time, tt.end_time, tt.lecture_title,
+                   tt.time_table_status_time_table_status_id AS status_id,
+                   lt.lecture_type_id, i.intake, subj.subject, p.programme,
+                   u.user_fname, u.user_lname, u.profile_img, t.title
+            {$lectureJoins}
             WHERE lt.lecture_type_id != 3
               AND tt.date BETWEEN '{$startDate}' AND '{$endDate}'
-              {$programmeSql}
-              " . ($search !== '' ? " AND (
-                    i.intake LIKE '%{$search}%'
-                    OR p.programme LIKE '%{$search}%'
-                    OR subj.subject LIKE '%{$search}%'
-                    OR tt.lecture_title LIKE '%{$search}%'
-                    OR CONCAT(u.user_fname,' ',u.user_lname) LIKE '%{$search}%'
-              ) " : "") . "
+              {$programmeSql} {$lectureSearchSql}
             ORDER BY tt.date DESC, tt.start_time ASC
             LIMIT 25
-        ";
-        $lecRes = Database::search($lecSql);
-        if ($lecRes) {
-            while ($row = $lecRes->fetch_assoc()) {
+        ");
+        foreach ($lectureRows as $row) {
+            $statusId = (int)$row['status_id'];
+            if ($statusId === 2) {
+                $status = 'Cancelled';
+            } elseif ($statusId === 3) {
+                $status = 'Postponed';
+            } elseif ($statusId === 5 || $row['date'] < $todayDate
+                || ($row['date'] === $todayDate && $nowTime > $row['end_time'])) {
+                $status = 'Completed';
+            } elseif ($row['date'] === $todayDate && $nowTime >= $row['start_time']) {
+                $status = 'Ongoing';
+            } else {
                 $status = 'Upcoming';
-                if ($row['date'] === $todayDate) {
-                    if ($nowTime >= $row['start_time'] && $nowTime <= $row['end_time']) {
-                        $status = 'Ongoing';
-                    } elseif ($nowTime > $row['end_time']) {
-                        $status = 'Completed';
-                    }
-                } elseif ($row['date'] < $todayDate) {
-                    $status = 'Completed';
-                }
-
-                $profilePath = './assets/imgs/users/' . ($row['profile_img'] ?? '');
-                $lectures[] = [
-                    'id' => $row['time_table_id'],
-                    'date' => $row['date'],
-                    'start' => $row['start_time'],
-                    'end' => $row['end_time'],
-                    'lecturer' => $row['title'] . '. ' . $row['user_fname'] . ' ' . $row['user_lname'],
-                    'profile' => !empty($row['profile_img']) && file_exists($profilePath) ? $profilePath : '',
-                    'initials' => strtoupper(substr($row['user_fname'] ?? 'L', 0, 1) . substr($row['user_lname'] ?? '', 0, 1)),
-                    'type' => (int)$row['lecture_type_id'] === 1 ? 'Physical' : 'Online',
-                    'intake' => $row['intake'],
-                    'subject' => !empty($row['lecture_title']) ? $row['lecture_title'] : $row['subject'],
-                    'status' => $status
-                ];
             }
+
+            $profilePath = './assets/imgs/users/' . ($row['profile_img'] ?? '');
+            $lectures[] = [
+                'id' => (int)$row['time_table_id'],
+                'date' => $row['date'],
+                'start' => $row['start_time'],
+                'end' => $row['end_time'],
+                'lecturer' => trim(($row['title'] ? $row['title'] . '. ' : '') . $row['user_fname'] . ' ' . $row['user_lname']),
+                'profile' => !empty($row['profile_img']) && file_exists($profilePath) ? $profilePath : '',
+                'initials' => strtoupper(substr($row['user_fname'] ?? 'L', 0, 1) . substr($row['user_lname'] ?? '', 0, 1)),
+                'type' => (int)$row['lecture_type_id'] === 1 ? 'Physical' : 'Online',
+                'intake' => $row['intake'],
+                'programme' => $row['programme'],
+                'subject' => !empty($row['lecture_title']) ? $row['lecture_title'] : $row['subject'],
+                'status' => $status,
+            ];
         }
 
-        $programmes = [];
-        $progRes = Database::search("SELECT programme_id AS id, programme AS name FROM programmes ORDER BY programme ASC");
-        if ($progRes) {
-            while ($p = $progRes->fetch_assoc()) {
-                $programmes[] = $p;
-            }
-        }
+        $programmes = self::fetchAll("SELECT programme_id AS id, programme AS name FROM programmes ORDER BY programme ASC");
 
         return [
             'student_cards' => $studentCards,
             'finance_cards' => $financeCards,
             'system_cards' => $systemCards,
+            'insights' => $insights,
+            'trend' => $trend,
+            'programme_mix' => $programmeMix,
             'live' => $liveClasses,
             'actions' => $actions,
             'batches' => $batches,
@@ -569,7 +698,13 @@ class AdminDashboardSummary
             'deadlines' => $deadlines,
             'lectures' => $lectures,
             'programmes' => $programmes,
-            'range' => ['from' => $startDate, 'to' => $endDate]
+            'range' => [
+                'from' => $startDate,
+                'to' => $endDate,
+                'prev_from' => $prevStart,
+                'prev_to' => $prevEnd,
+                'days' => $periodDays,
+            ],
         ];
     }
 
