@@ -148,10 +148,11 @@ class SuperAdminDashboard
             ], $overrides));
         };
 
-        $emptyState = function ($text, $sub = '') use ($e) {
-            return '<div class="sad-empty"><iconify-icon icon="ph:empty-bold" width="22" height="22"></iconify-icon>'
-                . '<span class="fw-medium">' . $e($text) . '</span>'
-                . ($sub !== '' ? '<span class="text-12 sub-text">' . $e($sub) . '</span>' : '')
+        // System empty state (same component used across the ERP).
+        $emptyState = function ($text = 'No data') use ($e) {
+            return '<div class="no-data-state">'
+                . '<div class="no-data-icon-wrap"><iconify-icon icon="ph:empty-bold"></iconify-icon></div>'
+                . '<p class="no-data-text">' . $e($text) . '</p>'
                 . '</div>';
         };
 ?>
@@ -979,16 +980,9 @@ class SuperAdminDashboard
 
 
 
-            .sad-empty {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                gap: 6px;
-                padding: 32px 16px;
-                color: var(--sub-text);
-                text-align: center;
-                font-size: 13.5px;
+            /* Keep the system empty-state icon round (the dashboard squares everything else) */
+            .sad .no-data-icon-wrap {
+                border-radius: 50%;
             }
 
             @media (max-width: 1199.98px) {
@@ -1195,7 +1189,7 @@ class SuperAdminDashboard
                                 <a class="sad-link" href="ongoing-lecture-attendance">Monitor<iconify-icon icon="mdi:chevron-right" width="16" height="16"></iconify-icon></a>
                             </div>
                         </div>
-                        <div class="flex-grow-1">
+                        <div class="flex-grow-1 <?= empty($liveClasses) ? 'd-flex align-items-center' : '' ?>">
                             <?php if (!empty($liveClasses)) {
                                 foreach ($liveClasses as $l) {
                                     $rowCls = $l['status'] === 'Live' ? 'is-live' : ($l['status'] === 'Ended' ? 'is-ended' : '');
@@ -1227,7 +1221,7 @@ class SuperAdminDashboard
                                     </div>
                             <?php }
                             } else {
-                                echo $emptyState('No classes scheduled for today', 'Physical and online lectures scheduled for today appear here.');
+                                echo $emptyState('No classes scheduled for today');
                             } ?>
                         </div>
                     </section>
@@ -1277,10 +1271,14 @@ class SuperAdminDashboard
                                 <span><i style="background:var(--sad-s1)"></i>Collected</span>
                             </div>
                         </div>
-                        <div class="sad-panel-body flex-grow-1">
-                            <div class="sad-chart fill">
-                                <canvas id="sadFeeChart" role="img" aria-label="Expected versus collected fees per month for the last six months"></canvas>
-                            </div>
+                        <div class="sad-panel-body flex-grow-1 d-flex flex-column justify-content-center">
+                            <?php if (array_sum($trend['expected']) + array_sum($trend['received']) > 0) { ?>
+                                <div class="sad-chart fill">
+                                    <canvas id="sadFeeChart" role="img" aria-label="Expected versus collected fees per month for the last six months"></canvas>
+                                </div>
+                            <?php } else {
+                                echo $emptyState('No fee data for the last 6 months');
+                            } ?>
                         </div>
                     </section>
                 </div>
@@ -1341,12 +1339,12 @@ class SuperAdminDashboard
             <div class="row g-4 mb-4">
                 <!-- Batches -->
                 <div class="col-12 col-xl-6">
-                    <section class="sad-panel h-100">
+                    <section class="sad-panel h-100 d-flex flex-column">
                         <div class="sad-panel-head">
                             <div class="d-flex align-items-center gap-2 flex-wrap"><span class="sub-topic">Batches</span> <span class="sad-scope">Course progress</span></div>
                             <a class="sad-link" href="intakes">All intakes<iconify-icon icon="mdi:chevron-right" width="16" height="16"></iconify-icon></a>
                         </div>
-                        <div>
+                        <div class="flex-grow-1 <?= empty($batchesList) ? 'd-flex align-items-center' : '' ?>">
                             <?php if (!empty($batchesList)) {
                                 foreach ($batchesList as $b) {
                             ?>
@@ -1378,7 +1376,7 @@ class SuperAdminDashboard
                                     </div>
                             <?php }
                             } else {
-                                echo $emptyState('No batches found', 'Try another programme or clear the search.');
+                                echo $emptyState('No batches found');
                             } ?>
                         </div>
                     </section>
@@ -1432,15 +1430,19 @@ class SuperAdminDashboard
             <div class="row g-4 mb-4">
                 <!-- Admissions trend -->
                 <div class="col-12 col-xl-6">
-                    <section class="sad-panel h-100">
+                    <section class="sad-panel h-100 d-flex flex-column">
                         <div class="sad-panel-head">
                             <div class="d-flex align-items-center gap-2 flex-wrap"><span class="sub-topic">New admissions</span> <span class="sad-scope">Last 6 months</span></div>
                             <span class="text-13 sub-text"><b class="text-dark-color"><?= number_format(array_sum($trend['admissions'])) ?></b> students</span>
                         </div>
-                        <div class="sad-panel-body">
-                            <div class="sad-chart sm">
-                                <canvas id="sadAdmissionChart" role="img" aria-label="New admissions per month for the last six months"></canvas>
-                            </div>
+                        <div class="sad-panel-body flex-grow-1 d-flex flex-column justify-content-center">
+                            <?php if (array_sum($trend['admissions']) > 0) { ?>
+                                <div class="sad-chart sm">
+                                    <canvas id="sadAdmissionChart" role="img" aria-label="New admissions per month for the last six months"></canvas>
+                                </div>
+                            <?php } else {
+                                echo $emptyState('No admissions in the last 6 months');
+                            } ?>
                         </div>
                     </section>
                 </div>
@@ -1534,7 +1536,7 @@ class SuperAdminDashboard
                                     <?php }
                                 } else { ?>
                                     <tr>
-                                        <td colspan="7" class="py-3"><?= $emptyState('No lectures found', 'No lectures scheduled for this date range and filter.') ?></td>
+                                        <td colspan="7" class="py-3"><?= $emptyState('No lectures found') ?></td>
                                     </tr>
                                 <?php } ?>
                             </tbody>
