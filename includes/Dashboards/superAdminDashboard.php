@@ -189,7 +189,6 @@ class SuperAdminDashboard
 
             .sad-panel {
                 background: var(--custom-white);
-                border: 1px solid var(--line-color);
                 min-width: 0;
                 max-width: 100%;
             }
@@ -200,8 +199,7 @@ class SuperAdminDashboard
                 justify-content: space-between;
                 gap: 12px;
                 flex-wrap: wrap;
-                padding: 16px 20px;
-                border-bottom: 1px solid var(--line-color);
+                padding: 18px 20px 10px;
             }
 
             .sad-panel-body {
@@ -224,8 +222,7 @@ class SuperAdminDashboard
                 letter-spacing: .4px;
                 text-transform: uppercase;
                 color: var(--sub-text);
-                border: 1px solid var(--line-color);
-                padding: 2px 7px;
+                padding: 0;
                 white-space: nowrap;
             }
 
@@ -270,20 +267,15 @@ class SuperAdminDashboard
 
             .sad-head-stats {
                 display: flex;
-                border: 1px solid var(--line-color);
-                background: var(--custom-white);
+                gap: 8px;
             }
 
             .sad-head-stats div {
                 padding: 8px 16px;
-                border-left: 1px solid var(--line-color);
+                background: var(--custom-white);
                 display: flex;
                 flex-direction: column;
                 min-width: 110px;
-            }
-
-            .sad-head-stats div:first-child {
-                border-left: 0;
             }
 
             .sad-head-stats b {
@@ -335,7 +327,7 @@ class SuperAdminDashboard
                 height: 42px;
                 width: 100%;
                 background: var(--custom-white);
-                border: 1px solid var(--line-color);
+                border: 1px solid transparent;
                 font-size: 13.5px;
                 color: var(--main-text-color);
                 padding: 0 12px;
@@ -400,7 +392,7 @@ class SuperAdminDashboard
             .sad-btn.ghost {
                 background: var(--custom-white);
                 color: var(--main-text-color);
-                border-color: var(--line-color);
+                border-color: transparent;
             }
 
             .sad-btn.ghost:hover {
@@ -423,7 +415,6 @@ class SuperAdminDashboard
                 width: 320px;
                 padding: 16px;
                 background: var(--custom-white);
-                border: 1px solid var(--line-color);
                 box-shadow: 0 14px 35px rgba(15, 23, 42, .12);
             }
 
@@ -450,8 +441,8 @@ class SuperAdminDashboard
             .sad-presets button {
                 height: 30px;
                 font-size: 12px;
-                border: 1px solid var(--line-color);
-                background: var(--custom-white);
+                border: 1px solid transparent;
+                background: var(--table-header-color);
                 color: var(--main-text-color);
             }
 
@@ -466,112 +457,19 @@ class SuperAdminDashboard
             }
 
             /* KPI grid – one rectangle split into cells */
-            .sad-kpis {
-                display: grid;
-                grid-template-columns: repeat(4, minmax(0, 1fr));
-                background: var(--custom-white);
-                border: 1px solid var(--line-color);
-            }
 
-            .sad-kpi {
-                padding: 16px 20px;
-                border-left: 1px solid var(--line-color);
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-                min-width: 0;
-                color: inherit;
-                text-decoration: none;
-                position: relative;
-                transition: box-shadow .2s ease;
-            }
 
-            .sad-kpi:first-child {
-                border-left: 0;
-            }
 
-            .sad-kpi:hover {
-                box-shadow: inset 0 -2px 0 var(--dark-theme);
-                color: inherit;
-            }
 
-            .sad-kpi-label {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                font-size: 13px;
-                font-weight: 600;
-                color: var(--sub-text);
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
 
-            .sad-kpi-label iconify-icon {
-                color: var(--dark-theme);
-                flex-shrink: 0;
-            }
 
-            .sad-kpi-row {
-                display: flex;
-                align-items: flex-end;
-                justify-content: space-between;
-                gap: 10px;
-            }
 
-            .sad-kpi-value {
-                font-size: 28px;
-                font-weight: 700;
-                color: var(--dark-color);
-                line-height: 1;
-                letter-spacing: -.5px;
-                white-space: nowrap;
-            }
 
-            .sad-kpi-value .cur {
-                font-size: 12px;
-                font-weight: 500;
-                color: var(--sub-text);
-                letter-spacing: 0;
-                margin-right: 2px;
-            }
 
-            .sad-kpi.money .sad-kpi-value {
-                font-size: 23px;
-            }
 
-            .sad-kpi-meta {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                font-size: 12px;
-                color: var(--sub-text);
-                flex-wrap: wrap;
-                min-height: 18px;
-            }
 
-            .sad-kpis.compact .sad-kpi {
-                flex-direction: row;
-                align-items: center;
-                justify-content: space-between;
-                padding: 12px 20px;
-            }
 
-            .sad-kpis.compact .sad-kpi-value {
-                font-size: 20px;
-            }
 
-            .sad-group-label {
-                font-size: 11.5px;
-                font-weight: 600;
-                letter-spacing: .5px;
-                text-transform: uppercase;
-                color: var(--sub-text);
-                margin: 0 0 8px;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
 
             .sad-delta {
                 display: inline-flex;
@@ -591,6 +489,28 @@ class SuperAdminDashboard
 
             .sad-delta.neutral {
                 color: var(--sub-text);
+            }
+
+            /* Summary cards (project stats-mini-card) */
+            .sad-card {
+                display: block;
+                height: 100%;
+                color: inherit;
+                text-decoration: none;
+            }
+
+            .sad-card:hover {
+                color: inherit;
+            }
+
+            .sad-card .stats-mini-value {
+                font-size: 28px;
+                white-space: nowrap;
+            }
+
+            .sad-card .stats-mini-change {
+                display: inline-flex;
+                align-items: center;
             }
 
             /* Thin meter */
@@ -616,8 +536,8 @@ class SuperAdminDashboard
             }
 
             .sad-spark span {
-                width: 7px;
-                background: var(--sad-muted);
+                width: 8px;
+                background: var(--light-theme);
             }
 
             .sad-spark span.on {
@@ -752,7 +672,7 @@ class SuperAdminDashboard
             .sad-action-ic {
                 width: 36px;
                 height: 36px;
-                border: 1px solid var(--line-color);
+                background: var(--light-theme);
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -822,16 +742,12 @@ class SuperAdminDashboard
             .sad-split {
                 display: grid;
                 grid-template-columns: repeat(3, 1fr);
-                border: 1px solid var(--line-color);
+                gap: 8px;
             }
 
             .sad-split div {
                 padding: 8px 10px;
-                border-left: 1px solid var(--line-color);
-            }
-
-            .sad-split div:first-child {
-                border-left: 0;
+                background: var(--table-header-color);
             }
 
             .sad-split b {
@@ -923,23 +839,20 @@ class SuperAdminDashboard
             /* Tabs */
             .sad-seg {
                 display: inline-flex;
-                border: 1px solid var(--line-color);
+                background: var(--table-header-color);
             }
 
             .sad-seg button {
                 border: 0;
-                background: var(--custom-white);
+                background: transparent;
                 font-size: 12.5px;
                 font-weight: 500;
                 color: var(--sub-text);
                 padding: 6px 12px;
             }
 
-            .sad-seg button + button {
-                border-left: 1px solid var(--line-color);
-            }
-
             .sad-seg button.active {
+                background: var(--custom-white);
                 color: var(--dark-theme);
                 box-shadow: inset 0 -2px 0 var(--dark-theme);
             }
@@ -964,7 +877,7 @@ class SuperAdminDashboard
 
             .sad-cal {
                 width: 48px;
-                border: 1px solid var(--line-color);
+                background: var(--light-theme);
                 text-align: center;
                 line-height: 1.1;
                 padding: 4px 0;
@@ -1096,8 +1009,7 @@ class SuperAdminDashboard
                 width: 34px;
                 height: 34px;
                 flex-shrink: 0;
-                background: var(--custom-white);
-                border: 1px solid var(--line-color);
+                background: var(--light-theme);
                 color: var(--dark-theme);
                 font-size: 12.5px;
                 font-weight: 600;
@@ -1120,18 +1032,6 @@ class SuperAdminDashboard
             }
 
             @media (max-width: 1199.98px) {
-                .sad-kpis {
-                    grid-template-columns: repeat(2, minmax(0, 1fr));
-                }
-
-                .sad-kpi:nth-child(3) {
-                    border-left: 0;
-                }
-
-                .sad-kpi:nth-child(n+3) {
-                    border-top: 1px solid var(--line-color);
-                }
-
                 .sad-filter {
                     flex-wrap: wrap;
                 }
@@ -1142,18 +1042,6 @@ class SuperAdminDashboard
             }
 
             @media (max-width: 767.98px) {
-                .sad-kpis {
-                    grid-template-columns: 1fr;
-                }
-
-                .sad-kpi {
-                    border-left: 0 !important;
-                }
-
-                .sad-kpi + .sad-kpi {
-                    border-top: 1px solid var(--line-color);
-                }
-
                 .sad-f-date,
                 .sad-f-search,
                 .sad-f-prog {
@@ -1274,69 +1162,64 @@ class SuperAdminDashboard
                 </div>
             </form>
 
-            <!-- Students -->
-            <p class="sad-group-label">Students <span class="sad-scope">Admitted in period</span></p>
-            <div class="sad-kpis mb-4">
-                <?php foreach ($studentCards as $c) { ?>
-                    <a class="sad-kpi" href="<?= $e($c['href']) ?>">
-                        <span class="sad-kpi-label">
-                            <iconify-icon icon="<?= $e($c['icon']) ?>" width="18" height="18"></iconify-icon><?= $e($c['title']) ?>
-                        </span>
-                        <span class="sad-kpi-value"><?= number_format($c['value']) ?></span>
-                        <?php if (isset($c['share'])) { ?>
-                            <span class="sad-meter" title="<?= $c['share'] ?>% of students admitted in period">
-                                <i style="width:<?= min(100, (float)$c['share']) ?>%; background:<?= $toneVar[$c['tone']] ?>"></i>
-                            </span>
-                            <span class="sad-kpi-meta"><b class="text-dark-color"><?= $c['share'] ?>%</b> of admitted students</span>
-                        <?php } else { ?>
-                            <?php $ofAll = $insights['campus_total'] > 0 ? round($c['value'] / $insights['campus_total'] * 100, 1) : 0; ?>
-                            <span class="sad-meter" title="<?= $ofAll ?>% of all enrolments"><i style="width:<?= min(100, $ofAll) ?>%"></i></span>
-                            <span class="sad-kpi-meta"><b class="text-dark-color"><?= $ofAll ?>%</b> of <?= number_format($insights['campus_total']) ?> enrolments all time</span>
-                        <?php } ?>
+            <!-- Summary cards -->
+            <?php
+            $renderCard = function ($c, $valueHtml, $metaHtml, $sparkHtml = '') use ($e) {
+            ?>
+                <div class="col-12 col-md-6 col-xl-3">
+                    <a class="stats-mini-card sad-card" href="<?= $e($c['href']) ?>">
+                        <div class="stats-mini-top">
+                            <div class="stats-mini-left">
+                                <div class="stats-mini-icon">
+                                    <iconify-icon icon="<?= $e($c['icon']) ?>" width="16" height="16"></iconify-icon>
+                                </div>
+                                <span class="stats-mini-title"><?= $e($c['title']) ?></span>
+                            </div>
+                        </div>
+                        <div class="stats-mini-body">
+                            <div class="stats-mini-content">
+                                <div class="stats-mini-value"><?= $valueHtml ?></div>
+                                <div class="stats-mini-meta"><?= $metaHtml ?></div>
+                            </div>
+                            <?= $sparkHtml ?>
+                        </div>
                     </a>
-                <?php } ?>
-            </div>
+                </div>
+            <?php
+            };
+            ?>
+            <div class="row g-3 mb-4">
+                <?php
+                // Students (admitted in the selected period)
+                foreach ($studentCards as $c) {
+                    if (isset($c['share'])) {
+                        $meta = '<span class="stats-mini-change" style="color:' . $toneVar[$c['tone']] . '">' . $c['share'] . '%</span>'
+                            . '<span class="stats-mini-period">of admitted students</span>';
+                        $renderCard($c, number_format($c['value']), $meta);
+                    } else {
+                        $meta = '<span class="stats-mini-period">Admitted in period · ' . number_format($insights['campus_total']) . ' all time</span>';
+                        $renderCard($c, number_format($c['value']), $meta, $spark($trend['admissions']));
+                    }
+                }
 
-            <!-- Finance -->
-            <p class="sad-group-label">Admissions &amp; finance <span class="sad-scope">Selected period</span></p>
-            <div class="sad-kpis mb-4">
-                <?php foreach ($financeCards as $c) {
+                // Admissions & finance (selected period)
+                foreach ($financeCards as $c) {
                     $isMoney = ($c['format'] ?? '') === 'money';
-                ?>
-                    <a class="sad-kpi <?= $isMoney ? 'money' : '' ?>" href="<?= $e($c['href']) ?>">
-                        <span class="sad-kpi-label">
-                            <iconify-icon icon="<?= $e($c['icon']) ?>" width="18" height="18"></iconify-icon><?= $e($c['title']) ?>
-                        </span>
-                        <span class="sad-kpi-row">
-                            <span class="sad-kpi-value" title="<?= $isMoney ? 'LKR ' . $money($c['value']) : '' ?>">
-                                <?php if ($isMoney) { ?><span class="cur">LKR</span><?= $money($c['value']) ?><?php } else { ?><?= number_format($c['value']) ?><?php } ?>
-                            </span>
-                            <?= isset($c['spark']) ? $spark($c['spark'], $isMoney) : '' ?>
-                        </span>
-                        <span class="sad-kpi-meta">
-                            <?php if (array_key_exists('change', $c)) { ?>
-                                <?= $changeHtml($c['change'], $c['good_up']) ?> vs previous period
-                            <?php } elseif (isset($c['rate'])) { ?>
-                                <span class="sad-meter" style="width:70px"><i style="width:<?= (float)$c['rate'] ?>%"></i></span>
-                                <b class="text-dark-color"><?= $c['rate'] ?>%</b> collected of due
-                            <?php } ?>
-                        </span>
-                    </a>
-                <?php } ?>
-            </div>
+                    $value = $isMoney ? $money($c['value']) : number_format($c['value']);
+                    if (array_key_exists('change', $c)) {
+                        $meta = $changeHtml($c['change'], $c['good_up']) . '<span class="stats-mini-period">vs previous period</span>';
+                    } else {
+                        $meta = '<span class="stats-mini-change" style="color:var(--dark-theme)">' . $c['rate'] . '%</span>'
+                            . '<span class="stats-mini-period">collected of due</span>';
+                    }
+                    $renderCard($c, $value, $meta, isset($c['spark']) ? $spark($c['spark'], $isMoney) : '');
+                }
 
-            <!-- System -->
-            <p class="sad-group-label">System <span class="sad-scope">All campus</span></p>
-            <div class="sad-kpis compact mb-4">
-                <?php foreach ($systemCards as $c) { ?>
-                    <a class="sad-kpi" href="<?= $e($c['href']) ?>">
-                        <span class="sad-kpi-label">
-                            <iconify-icon icon="<?= $e($c['icon']) ?>" width="18" height="18"></iconify-icon><?= $e($c['title']) ?>
-                            <small class="fw-normal">· <?= $e($c['note']) ?></small>
-                        </span>
-                        <span class="sad-kpi-value"><?= number_format($c['value']) ?></span>
-                    </a>
-                <?php } ?>
+                // System (all campus)
+                foreach ($systemCards as $c) {
+                    $renderCard($c, number_format($c['value']), '<span class="stats-mini-period">' . $e($c['note']) . '</span>');
+                }
+                ?>
             </div>
 
             <div class="row g-4 mb-4">
