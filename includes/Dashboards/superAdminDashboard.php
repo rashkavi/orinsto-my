@@ -296,7 +296,7 @@ class SuperAdminDashboard
             }
 
             .sad-f-date {
-                flex: 0 0 240px;
+                flex: 0 0 260px;
                 position: relative;
             }
 
@@ -316,8 +316,9 @@ class SuperAdminDashboard
                 gap: 8px;
             }
 
+            /* Date range toggle: a button styled to sit with the system custom-input / custom-select controls */
             .sad-control {
-                height: 42px;
+                height: 48px;
                 width: 100%;
                 background: var(--custom-white);
                 border: 1px solid var(--line-color);
@@ -337,14 +338,17 @@ class SuperAdminDashboard
             }
 
             button.sad-control {
+                white-space: nowrap;
+                gap: 8px;
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
                 cursor: pointer;
             }
 
-            .sad-f-search .sad-control {
-                padding-left: 38px;
+            .sad-f-search .sad-search-input {
+                height: 48px;
+                padding-left: 40px;
                 padding-right: 34px;
             }
 
@@ -366,7 +370,7 @@ class SuperAdminDashboard
             }
 
             .sad-btn {
-                height: 42px;
+                height: 48px;
                 padding: 0 18px;
                 border: 1px solid var(--dark-theme);
                 background: var(--dark-theme);
@@ -398,7 +402,7 @@ class SuperAdminDashboard
             }
 
             .sad-btn.icon {
-                width: 42px;
+                width: 48px;
                 padding: 0;
                 justify-content: center;
             }
@@ -406,7 +410,7 @@ class SuperAdminDashboard
             .sad-popover {
                 display: none;
                 position: absolute;
-                top: 46px;
+                top: 52px;
                 left: 0;
                 z-index: 1050;
                 width: 320px;
@@ -1086,7 +1090,7 @@ class SuperAdminDashboard
 
                 <div class="sad-f-search">
                     <iconify-icon icon="mdi:magnify" width="18" height="18" class="ico"></iconify-icon>
-                    <input type="text" name="search" value="<?= $e($searchFilter) ?>" class="sad-control" placeholder="Search student, intake, subject or lecturer...">
+                    <input type="text" name="search" value="<?= $e($searchFilter) ?>" class="form-control custom-input sad-search-input" placeholder="Search student, intake, subject or lecturer...">
                     <?php if ($searchFilter !== '') { ?>
                         <a href="?<?= $e($baseQuery(['search' => ''])) ?>" class="clear" title="Clear search">
                             <iconify-icon icon="mdi:close" width="16" height="16"></iconify-icon>
@@ -1095,7 +1099,7 @@ class SuperAdminDashboard
                 </div>
 
                 <div class="sad-f-prog">
-                    <select name="programme" class="sad-control" onchange="this.form.submit()" aria-label="Programme">
+                    <select name="programme" class="form-select custom-select" onchange="this.form.submit()" aria-label="Programme">
                         <option value="0">All programmes</option>
                         <?php foreach ($programmes as $p) { ?>
                             <option value="<?= (int)$p['id'] ?>" <?= $progFilter === (int)$p['id'] ? 'selected' : '' ?>><?= $e($p['name']) ?></option>
