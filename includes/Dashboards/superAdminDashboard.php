@@ -346,28 +346,11 @@ class SuperAdminDashboard
                 cursor: pointer;
             }
 
-            .sad-f-search .sad-search-input {
+            .sad-search-box {
                 height: 48px;
-                padding-left: 40px;
-                padding-right: 34px;
             }
 
-            .sad-f-search .ico {
-                position: absolute;
-                left: 12px;
-                top: 50%;
-                transform: translateY(-50%);
-                color: var(--sub-text);
-            }
 
-            .sad-f-search .clear {
-                position: absolute;
-                right: 10px;
-                top: 50%;
-                transform: translateY(-50%);
-                color: var(--sub-text);
-                display: flex;
-            }
 
             .sad-btn {
                 height: 48px;
@@ -1089,13 +1072,16 @@ class SuperAdminDashboard
                 </div>
 
                 <div class="sad-f-search">
-                    <iconify-icon icon="mdi:magnify" width="18" height="18" class="ico"></iconify-icon>
-                    <input type="text" name="search" value="<?= $e($searchFilter) ?>" class="form-control custom-input sad-search-input" placeholder="Search student, intake, subject or lecturer...">
-                    <?php if ($searchFilter !== '') { ?>
-                        <a href="?<?= $e($baseQuery(['search' => ''])) ?>" class="clear" title="Clear search">
-                            <iconify-icon icon="mdi:close" width="16" height="16"></iconify-icon>
-                        </a>
-                    <?php } ?>
+                    <!-- Same search box markup as the other system pages -->
+                    <div class="h-100 d-flex align-items-center p-1 bl-solid component-theme sad-search-box">
+                        <iconify-icon icon="teenyicons:search-outline" width="20" height="20" class="text-dark-color px-3 pe-3 pt-2 pb-2"></iconify-icon>
+                        <input type="text" name="search" value="<?= $e($searchFilter) ?>" class="h-100 sub-text form-control border-0 shadow-none" placeholder="What do you want to search...">
+                        <?php if ($searchFilter !== '') { ?>
+                            <a href="?<?= $e($baseQuery(['search' => ''])) ?>" class="sub-text d-flex px-2" title="Clear search">
+                                <iconify-icon icon="mdi:close" width="18" height="18"></iconify-icon>
+                            </a>
+                        <?php } ?>
+                    </div>
                 </div>
 
                 <div class="sad-f-prog">
