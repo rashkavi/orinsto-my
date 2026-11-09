@@ -1,0 +1,11 @@
+[2026-07-21 16:17:36] SMS API call [POST] https://sender.hashnetlk.com/api.php?FUN=SEND_BULK_SAME | HTTP 400 | Response: {"error":"Minimum 2 Numbers Required!"}
+[2026-07-21 16:19:48] SMS API call [POST] https://sender.hashnetlk.com/api.php?FUN=SEND_BULK_SAME | HTTP 400 | Response: {"error":"Minimum 2 Numbers Required!"}
+[2026-09-27 15:01:04] SMS API call [POST] https://sender.hashnetlk.com/api.php?FUN=SEND_BULK_DIFFERENT | HTTP 400 | Response: {"error":"Minimum 2 Numbers Required!"}
+[2026-09-27 15:02:10] SMS API call [POST] https://sender.hashnetlk.com/api.php?FUN=SEND_BULK_DIFFERENT | HTTP 400 | Response: {"error":"Minimum 2 Numbers Required!"}
+[2026-09-27 15:05:02] SMS API call [POST] https://sender.hashnetlk.com/api.php?FUN=SEND_BULK_DIFFERENT | HTTP 200 | Response: {"status":"success","id":"8706ab8e344b948a377"}
+[2026-10-03 10:34:24] SMS API call [POST] https://sender.hashnetlk.com/api.php?FUN=SEND_BULK_DIFFERENT | HTTP 200 | Response: {"status":"success","id":"8706ac08cd7d2faf377"}
+[2026-10-30 11:43:07] SMS API call [POST] https://sender.hashnetlk.com/api.php?FUN=SEND_BULK_DIFFERENT | HTTP 400 | Response: {"error":"Minimum 2 Numbers Required!"}
+[2026-10-30 11:46:49] SMS API call [POST] https://sender.hashnetlk.com/api.php?FUN=SEND_SINGLE | HTTP 400 | Response: {"error":"Phone Number is not valid! Phone Number Should Start With 07 and Must Have 10 Numbers!"}
+[2026-10-30 11:46:54] SMS API call [POST] https://sender.hashnetlk.com/api.php?FUN=SEND_SINGLE | HTTP 400 | Response: {"error":"Phone Number is not valid! Phone Number Should Start With 07 and Must Have 10 Numbers!"}
+[2026-10-30 11:48:27] SMS API call [POST] https://sender.hashnetlk.com/api.php?FUN=SEND_SINGLE | HTTP 200 | Response: {"status":"success","id":"8706ae436b2a9421377"}
+[2026-10-30 12:35:32] SMS API call [POST] https://sender.hashnetlk.com/api.php?FUN=SEND_SINGLE | HTTP 200 | Response: {"status":"success","id":"8706ae441bb16f81377"}

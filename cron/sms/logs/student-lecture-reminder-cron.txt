@@ -1,0 +1,4 @@
+[2026-10-03 10:34:24] SMS: 2 reminder(s) queued (0 one-week, 2 two-day) across 1 batch(es). Sent: 1, Failed: 0
+[2026-10-03 10:34:24] Completed. Lectures matched: 2 (1-week: 0, 2-day: 2). SMS batches sent: 1, failed: 0. Skipped (no mobile): 0
+[2026-10-15 10:55:12] No SMS reminders to send.
+[2026-10-15 10:55:12] Completed. Lectures matched: 0 (1-week: 0, 2-day: 0). SMS batches sent: 0, failed: 0. Skipped (no mobile): 0

@@ -1,0 +1,209 @@
+[2026-10-04 08:00:03] No SMS reminders to send.
+[2026-10-04 08:00:03] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-05 08:00:03] No SMS reminders to send.
+[2026-10-05 08:00:03] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-06 08:00:03] No SMS reminders to send.
+[2026-10-06 08:00:03] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-07 08:00:03] No SMS reminders to send.
+[2026-10-07 08:00:03] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-08 08:00:03] No SMS reminders to send.
+[2026-10-08 08:00:03] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-09 08:00:04] No SMS reminders to send.
+[2026-10-09 08:00:04] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-10 08:00:03] No SMS reminders to send.
+[2026-10-10 08:00:03] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-11 08:00:03] No SMS reminders to send.
+[2026-10-11 08:00:03] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-12 08:00:03] No SMS reminders to send.
+[2026-10-12 08:00:03] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-13 08:00:04] No SMS reminders to send.
+[2026-10-13 08:00:04] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-14 08:00:04] No SMS reminders to send.
+[2026-10-14 08:00:04] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-15 08:00:03] No SMS reminders to send.
+[2026-10-15 08:00:04] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-16 08:00:03] No SMS reminders to send.
+[2026-10-16 08:00:03] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-17 08:00:03] No SMS reminders to send.
+[2026-10-17 08:00:03] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-18 08:00:04] No SMS reminders to send.
+[2026-10-18 08:00:04] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-19 08:00:03] No SMS reminders to send.
+[2026-10-19 08:00:03] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-20 08:00:03] No SMS reminders to send.
+[2026-10-20 08:00:03] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-21 08:00:04] No SMS reminders to send.
+[2026-10-21 08:00:04] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-22 08:00:04] No SMS reminders to send.
+[2026-10-22 08:00:04] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-23 08:00:03] No SMS reminders to send.
+[2026-10-23 08:00:03] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-24 08:00:03] No SMS reminders to send.
+[2026-10-24 08:00:03] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-25 08:00:03] No SMS reminders to send.
+[2026-10-25 08:00:03] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-26 08:00:04] No SMS reminders to send.
+[2026-10-26 08:00:04] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-27 08:00:03] No SMS reminders to send.
+[2026-10-27 08:00:03] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-28 08:00:03] No SMS reminders to send.
+[2026-10-28 08:00:03] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-29 08:00:04] No SMS reminders to send.
+[2026-10-29 08:00:04] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-30 08:00:03] No SMS reminders to send.
+[2026-10-30 08:00:03] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-30 11:31:19] No SMS reminders to send.
+[2026-10-30 11:31:19] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-30 11:50:13] No SMS reminders to send.
+[2026-10-30 11:50:13] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-30 11:50:39] No SMS reminders to send.
+[2026-10-30 11:50:39] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-30 11:50:43] No SMS reminders to send.
+[2026-10-30 11:50:43] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-10-31 08:00:04] No SMS reminders to send.
+[2026-10-31 08:00:04] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-11-01 08:00:03] No SMS reminders to send.
+[2026-11-01 08:00:03] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-11-02 08:00:04] No SMS reminders to send.
+[2026-11-02 08:00:04] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-11-03 08:00:05] No SMS reminders to send.
+[2026-11-03 08:00:05] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-11-04 08:00:02] No SMS reminders to send.
+[2026-11-04 08:00:02] Completed. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0
+[2026-11-05 08:00:05] SMS batch failed: {"error":"12th Mobile Number Is Invalid (+0097332006869)."}
+[2026-11-05 08:00:05] SMS: 131 reminder(s) queued across 7 batch(es). Sent: 6, Failed: 1
+[2026-11-05 08:00:05] Completed. SMS batches sent: 6, failed: 1. Skipped (no mobile): 0
+[2026-11-05 08:54:52] SMS batch failed: {"error":"12th Mobile Number Is Invalid (+0097332006869)."}
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 1, mobile: 0788434343
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 2, mobile: 0755637429
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 3, mobile: 0720833410
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 4, mobile: 0713555570
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 5, mobile: 0766843031
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 7, mobile: 0789720485
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 8, mobile: 0760068714
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 9, mobile: 0775200800
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 10, mobile: 0774019964
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 11, mobile: 0766700264
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 12, mobile: 0768725815
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 13, mobile: 0763033933
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 14, mobile: 0743480261
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 15, mobile: 0756421567
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 16, mobile: 0702980635
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 17, mobile: 0756142888
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 18, mobile: 0714154673
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 19, mobile: 0756101429
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 20, mobile: 0753433488
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 21, mobile: 0762434466
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 22, mobile: 0762063600
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 23, mobile: 0759300365
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 24, mobile: 0764083176
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 25, mobile: 0774427509
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 26, mobile: 0770780780
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 27, mobile: 0758408894
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 28, mobile: 0702252590
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 29, mobile: 0762441124
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 30, mobile: 0777863860
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 31, mobile: 0774446543
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 32, mobile: 0750693008
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 33, mobile: 0766292134
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 34, mobile: 0769311585
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 35, mobile: 0741145184
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 36, mobile: 0769233225
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 37, mobile: 0776401640
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 38, mobile: 0750866159
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 39, mobile: 0752471188
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 40, mobile: 0777594852
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 41, mobile: 0778841610
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 42, mobile: 0741381261
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 43, mobile: 0771439310
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 44, mobile: 0787824091
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 45, mobile: 0777111908
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 46, mobile: 0742771696
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 47, mobile: 0779487789
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 48, mobile: 0766493611
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 49, mobile: 0751661576
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 50, mobile: 0762941879
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 51, mobile: 0756305164
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 52, mobile: 0760805736
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 53, mobile: 0774980930
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 54, mobile: 0760953329
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 55, mobile: 0743674702
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 56, mobile: 0773795674
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 57, mobile: 0773536659
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 58, mobile: 0770613179
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 59, mobile: 0766438655
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 61, mobile: 0776029074
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 76, mobile: 0751288612
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 80, mobile: 0704688764
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 84, mobile: 0715177954
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 85, mobile: 0758021312
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 86, mobile: 0720999848
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 87, mobile: 0768785893
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 88, mobile: 0773751403
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 89, mobile: 0756702077
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 93, mobile: 0763652670
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 94, mobile: 0761440874
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 95, mobile: 0762204439
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 96, mobile: 0773123698
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 97, mobile: 0753646366
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 99, mobile: 0729040258
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 102, mobile: 0759141427
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 107, mobile: 0750980384
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 109, mobile: 0712739982
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 110, mobile: 0717680616
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 111, mobile: 0768731568
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 115, mobile: 0741061533
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 116, mobile: 0725323697
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 117, mobile: 0741948053
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 119, mobile: 0763684041
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 122, mobile: 0761541303
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 123, mobile: 0777575437
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 124, mobile: 0761105083
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 126, mobile: 0785927198
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 127, mobile: 0771054201
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 129, mobile: 0701442038
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 130, mobile: 0742659366
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 131, mobile: 0764145174
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 132, mobile: 0779286983
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 136, mobile: +0097332006869
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 140, mobile: 0761216381
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 142, mobile: 0776627294
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 146, mobile: 0742856492
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 147, mobile: 0759495949
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 148, mobile: 0767692455
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 151, mobile: 0760989351
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 153, mobile: 0762440709
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 155, mobile: 0769481198
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 158, mobile: 0771935080
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 159, mobile: 0741208312
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 160, mobile: 0743308932
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 189, mobile: 0767805453
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 192, mobile: 0705283235
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 193, mobile: 0762015797
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 195, mobile: 0770063453
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 196, mobile: 0740428139
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 199, mobile: 0763703638
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 200, mobile: 0751201067
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 203, mobile: 0765483425
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 204, mobile: 0787876060
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 206, mobile: 0761764343
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 208, mobile: 0773630227
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 209, mobile: 0741863113
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 211, mobile: 0760036489
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 212, mobile: 0766636276
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 214, mobile: 0728420025
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 215, mobile: 0772367124
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 216, mobile: 0770382054
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 217, mobile: 0753481303
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 220, mobile: 0763530179
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 222, mobile: 0753364212
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 227, mobile: 0719179439
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 230, mobile: 0763545262
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 231, mobile: 0710139447
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 232, mobile: 0783390112
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 235, mobile: 0711148101
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 245, mobile: 0721262300
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 252, mobile: 0760173240
+[2026-11-05 08:54:52] SMS SENT/FAILED (check batch errors above) (reminder) - student_id: 255, mobile: 0779338393
+[2026-11-05 08:54:52] SMS: 131 reminder(s) queued across 7 batch(es). Sent: 6, Failed: 1
+[2026-11-05 08:54:52] Completed. SMS batches sent: 6, failed: 1. Skipped (no mobile): 0

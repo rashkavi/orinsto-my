@@ -1,0 +1,10 @@
+{
+    "require": {
+        "smalot/pdfparser": "^2.12",
+        "jenssegers/agent": "^2.6",
+        "google/cloud-vision": "^2.2",
+        "phpoffice/phpspreadsheet": "^5.7",
+        "setasign/fpdf": "^1.8",
+        "dompdf/dompdf": "^3.1"
+    }
+}

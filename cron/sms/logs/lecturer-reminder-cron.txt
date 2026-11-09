@@ -1,0 +1,13 @@
+[2026-09-27 19:41:44] Error: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '+ INTERVAL 15 MINUTE)
+        GROUP BY tt.time_table_id' at line 32
+[2026-09-27 19:41:46] Error: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '+ INTERVAL 15 MINUTE)
+        GROUP BY tt.time_table_id' at line 32
+[2026-09-27 19:41:47] Error: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '+ INTERVAL 15 MINUTE)
+        GROUP BY tt.time_table_id' at line 32
+[2026-09-27 19:41:47] Error: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '+ INTERVAL 15 MINUTE)
+        GROUP BY tt.time_table_id' at line 32
+[2026-09-27 19:41:47] Error: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '+ INTERVAL 15 MINUTE)
+        GROUP BY tt.time_table_id' at line 32
+[2026-09-27 19:43:38] Error: Unknown column 'u.mobile' in 'field list'
+[2026-09-27 19:43:59] No SMS reminders to send.
+[2026-09-27 19:43:59] Completed. Lectures matched: 0. SMS batches sent: 0, failed: 0. Skipped (no mobile): 0

@@ -1,0 +1,9 @@
+[2026-05-22 06:22:06] Error: Field 'users_user_id' doesn't have a default value
+[2026-05-22 06:23:33] Payroll run generated successfully | payroll_run_id: 2 | month: 5 | year: 2026 | total_employees: 1 | total_gross_salary: 100500.00 | total_net_salary: 92500.00 | date_generated: 2026-05-22 06:23:33
+[2026-05-23 09:00:04] Payroll run generated successfully | payroll_run_id: 3 | month: 5 | year: 2026 | total_employees: 4 | total_gross_salary: 491600.00 | total_net_salary: 451512.00 | date_generated: 2026-05-23 09:00:04
+[2026-05-24 22:52:11] Payroll run generated successfully | payroll_run_id: 4 | month: 5 | year: 2026 | total_employees: 5 | total_gross_salary: 556600.00 | total_net_salary: 511712.00 | date_generated: 2026-05-24 22:52:11
+[2026-06-19 07:17:23] Error: Data truncated for column 'deduction_calculation_base' at row 1
+[2026-06-19 07:18:20] Payroll run generated successfully | payroll_run_id: 6 | month: 6 | year: 2026 | total_employees: 6 | total_gross_salary: 576600.00 | total_net_salary: 555400.00 | date_generated: 2026-06-19 07:18:20
+[2026-10-15 16:23:05] Payroll run generated successfully | payroll_run_id: 1 | month: 10 | year: 2026 | total_employees: 0 | total_gross_salary: 0.00 | total_net_salary: 0.00 | date_generated: 2026-10-15 16:23:05
+[2026-10-15 16:24:46] Payroll run generated successfully | payroll_run_id: 2 | month: 10 | year: 2026 | total_employees: 1 | total_gross_salary: 30100.00 | total_net_salary: 30100.00 | date_generated: 2026-10-15 16:24:46
+[2026-10-16 09:26:18] Payroll run generated successfully | payroll_run_id: 3 | month: 9 | year: 2026 | total_employees: 2 | total_gross_salary: 100100.00 | total_net_salary: 100100.00 | date_generated: 2026-10-16 09:26:18

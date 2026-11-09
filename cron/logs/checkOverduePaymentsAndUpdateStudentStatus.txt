@@ -1,0 +1,2 @@
+[2026-07-14 05:51:07] Flagged OVERDUE | students_has_intakes_id: 5 | student_id: 3 | intake_id: 1 | course_payments_id=12 due_date=2026-06-25 balance=6000.00
+[2026-07-14 05:51:07] Run complete | total_checked: 11 | total_flagged_overdue: 1 | date: 2026-07-14 05:51:07

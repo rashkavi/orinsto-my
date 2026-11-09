@@ -1,0 +1,6 @@
+[2026-07-19 14:17:09] Test cron triggered successfully.
+[2026-07-19 14:17:09] Server date/time: 2026-07-19 14:17:09
+[2026-07-19 14:17:09] Timezone in use: Asia/Colombo
+[2026-07-19 14:17:09] PHP SAPI: apache2handler
+[2026-07-19 14:17:09] Script path: C:\xampp\htdocs\Orinsto-Campus-Admin\cron\TestCronSetupCheck.php
+[2026-07-19 14:17:09] Run complete | execution_time_sec: 0.0027

@@ -1,0 +1,5 @@
+[2026-09-27 15:02:10] SMS batch failed: {"error":"Minimum 2 Numbers Required!"}
+[2026-09-27 15:02:10] SMS: 1 reminder(s) queued across 1 batch(es). Sent: 0, Failed: 1
+[2026-09-27 15:02:10] Completed. Lectures matched: 1. SMS batches sent: 0, failed: 1. Skipped (no mobile): 0
+[2026-09-27 15:05:02] SMS: 2 reminder(s) queued across 1 batch(es). Sent: 1, Failed: 0
+[2026-09-27 15:05:02] Completed. Lectures matched: 2. SMS batches sent: 1, failed: 0. Skipped (no mobile): 0
